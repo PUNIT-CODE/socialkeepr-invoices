@@ -140,6 +140,24 @@ h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: v
 .imptable tr.lv-check td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
 .imptable tr.lv-bad td:first-child { box-shadow: inset 3px 0 0 var(--warn); } .imptable tr.lv-bad td.nt { color: var(--warn); }
 button[disabled] { opacity: .5; cursor: not-allowed; }
+.monthname { min-width: 9.5em; text-align: center; font-size: 15px; }
+.weekchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.wchip { background: var(--panel); border: 1px solid var(--line); color: var(--fg); border-radius: 999px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
+.wchip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.wchip .tag { font-size: 11px; color: var(--accent); font-weight: 600; margin-left: 4px; }
+.tileact { justify-content: space-between; } .tileact .primary { padding: 9px 14px; align-self: flex-start; }
+.dayblock h3 { font-size: 15px; margin: 6px 0 10px; } .dayblock h3 span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 6px; }
+.jobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.job { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.job header { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.job header b { font-family: var(--font-num); font-size: 14px; margin-right: auto; }
+.job .jt { margin: 0; font-weight: 600; } .job .jv { margin: 0; color: var(--muted); font-size: 13px; }
+.job dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 4px 0 0; font-size: 13px; }
+.job dl div { display: contents; } .job dt { color: var(--muted); } .job dd { margin: 0; overflow-wrap: anywhere; }
+.pill.neutral { background: var(--field); color: var(--muted); border: 1px solid var(--line); } .pill.att { background: var(--accent-soft); color: var(--accent); }
+.filebtn { display: inline-block; cursor: pointer; }
+.sheetbox { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.sheetbox p { margin: 0; font-size: 14px; }
 
 /* editor */
 .editor { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
@@ -195,6 +213,7 @@ button.danger:hover { border-color: var(--warn); }
     <nav class="nav" aria-label="Main">
       <button class="navbtn new" type="button" id="navNew">+ New invoice</button>
       <button class="navbtn" type="button" id="navDash">Dashboard</button>
+      <button class="navbtn" type="button" id="navRun">Run sheet</button>
       <button class="navbtn" type="button" id="navImport">Import old invoices</button>
     </nav>
     <div class="listhead"><span id="listCount">Invoices</span><button class="listtoggle" type="button" id="listToggle" aria-expanded="false">Show</button></div>
@@ -283,6 +302,7 @@ let draft = null;           // the invoice open in the editor
 function go(r) { route = r; if (window.innerWidth < 900) $('side').classList.add('collapsed'), $('listToggle').setAttribute('aria-expanded', 'false'), $('listToggle').textContent = 'Show'; render(); window.scrollTo(0, 0); }
 $('navDash').addEventListener('click', () => go({ name: 'dash' }));
 $('navImport').addEventListener('click', () => go({ name: 'import' }));
+$('navRun').addEventListener('click', () => go({ name: 'runsheet' }));
 $('navNew').addEventListener('click', () => { draft = freshDraft(); store.set('draft', draft); go({ name: 'edit' }); });
 $('listToggle').addEventListener('click', () => { const s = $('side'); const open = s.classList.toggle('collapsed') === false; $('listToggle').setAttribute('aria-expanded', String(open)); $('listToggle').textContent = open ? 'Hide' : 'Show'; });
 
@@ -303,11 +323,13 @@ function render() { renderSide(); const v = $('view');
   else if (route.name === 'edit') renderEditor();
   else if (route.name === 'inv') renderInvoice(route.no);
   else if (route.name === 'import') renderImport();
+  else if (route.name === 'runsheet') renderRunSheet();
 }
 
 function renderSide() {
   $('navDash').setAttribute('aria-current', route.name === 'dash' ? 'page' : 'false');
   $('navImport').setAttribute('aria-current', route.name === 'import' ? 'page' : 'false');
+  $('navRun').setAttribute('aria-current', route.name === 'runsheet' ? 'page' : 'false');
   const list = $('invList'); const all = sorted();
   $('listCount').textContent = 'Invoices' + (loaded ? ' (' + all.length + ')' : '');
   if (!loaded) { list.innerHTML = '<li class="sidenote">Loading your invoices…</li>'; }
@@ -507,6 +529,7 @@ function renderEditor() {
         '<label class="f">Total hours<input id="fHours" type="number" min="0" step="0.25" inputmode="decimal" placeholder="e.g. 8"></label>' +
         '<label class="f">Which days<input id="fDays" type="text" placeholder="e.g. 16, 17 & 18 Oct 2026"></label></div>' +
         '<p class="hint">Leave total hours empty to hide this line on the invoice. Rows with no quantity are left off the PDF.</p></section>' +
+      '<section class="card"><h2>From the run sheet</h2><div class="sheetbox"><p>Week: <b id="wkLabel"></b></p><div class="actions"><input id="fWeek" type="date" aria-label="Any day in the week" style="width:auto"><button class="secondary" type="button" id="bFill">Fill in jobs from the run sheet</button></div></div><p class="status" id="fillMsg" role="status"></p></section>' +
       '<section class="card"><h2>What you are charging for</h2>' +
         '<div class="tablebox"><table class="items" aria-label="Line items"><thead><tr><th style="width:34%">Description</th><th style="width:14%">Quantity</th><th style="width:14%">Unit</th><th style="width:16%">Rate ($)</th><th style="width:16%;text-align:right">Amount</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>' +
         '<div class="addrow"><button class="chip" type="button" data-add="event">+ Photo booth events</button><button class="chip" type="button" data-add="attendant">+ Attendant hours</button><button class="chip" type="button" data-add="fuel">+ Fuel</button><button class="chip" type="button" data-add="custom">+ Other</button></div>' +
@@ -535,6 +558,20 @@ function renderEditor() {
   $('bSave').addEventListener('click', () => trySave(false));
   $('bSaveDl').addEventListener('click', () => trySave(true));
   if ($('bCancel')) $('bCancel').addEventListener('click', () => { const no = draft.editing; draft = null; store.del('draft'); go({ name: 'inv', no }); });
+  const wk = () => draft.weekStart || invoiceWeekStart(draft.date);
+  const showWk = () => { $('wkLabel').textContent = weekLabel(wk()); $('fWeek').value = wk(); };
+  showWk();
+  $('fWeek').addEventListener('change', e => { if (e.target.value) { draft.weekStart = mondayOf(e.target.value); showWk(); edited(); } });
+  $('fDate').addEventListener('change', () => { if (!draft.weekLocked) { delete draft.weekStart; showWk(); } });
+  $('bFill').addEventListener('click', async () => {
+    const msg = $('fillMsg'); msg.className = 'status'; msg.textContent = 'Reading the run sheet…';
+    const ws = wk(); const { jobs, res } = await jobsForWeek(ws, true);
+    const prob = sheetProblem(res);
+    if (!jobs.length) { msg.className = 'status bad'; msg.textContent = prob || ('No jobs on the run sheet for ' + weekLabel(ws) + '.'); return; }
+    const s = applyWeek(draft, ws, jobs); draft.weekLocked = true;
+    renderRows(); $('fDays').value = draft.hoursDays; edited();
+    msg.className = 'status ok'; msg.textContent = 'Found ' + s.count + ' job' + (s.count === 1 ? '' : 's') + ' on ' + s.days + (s.attHours ? ', with ' + fmtNum(s.attHours) + ' attendant hrs (' + s.att.map(x => x.j.client.split(' ')[0] + ' ' + dayLabel(x.j.date)).join(', ') + ')' : ', no attendant hours') + '. Check the fuel and hours, then save.' + (prob ? ' ' + prob : '');
+  });
   renderRows(); edited(true);
 }
 function renderRows() {
@@ -621,8 +658,210 @@ function renderInvoice(no) {
   });
 }
 
+/* ---------- run sheet (the team's Google Sheet, one tab per month: SEP, OCT …) ---------- */
+const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const isoOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const dateOf = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (iso, n) => { const d = dateOf(iso); d.setDate(d.getDate() + n); return isoOf(d); };
+const mondayOf = iso => { const d = dateOf(iso); const k = (d.getDay() + 6) % 7; d.setDate(d.getDate() - k); return isoOf(d); };
+// A Thursday invoice covers the Monday to Sunday before it.
+const invoiceWeekStart = iso => addDays(mondayOf(iso || todayISO()), -7);
+const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function dayLabel(iso) { const d = dateOf(iso); return DOW[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()]; }
+function weekLabel(ws) { const we = addDays(ws, 6); const a = dateOf(ws), b = dateOf(we); return 'Mon ' + a.getDate() + (a.getMonth() !== b.getMonth() ? ' ' + MONTHS[a.getMonth()] : '') + ' – Sun ' + b.getDate() + ' ' + MONTHS[b.getMonth()] + ' ' + b.getFullYear(); }
+function daysText(isos) { // "16, 17 & 18 Oct 2026"
+  const ds = Array.from(new Set(isos)).sort().map(dateOf); if (!ds.length) return '';
+  const groups = []; ds.forEach(d => { const g = groups[groups.length - 1]; if (g && g.m === d.getMonth() && g.y === d.getFullYear()) g.days.push(d.getDate()); else groups.push({ m: d.getMonth(), y: d.getFullYear(), days: [d.getDate()] }); });
+  const join = a => a.length > 1 ? a.slice(0, -1).join(', ') + ' & ' + a[a.length - 1] : String(a[0]);
+  return groups.map((g, i) => join(g.days) + ' ' + MONTHS[g.m] + (i === groups.length - 1 || g.y !== groups[groups.length - 1].y ? ' ' + g.y : '')).join(', ');
+}
+function boothHours(t) {
+  const m = String(t || '').match(/(\d{1,2})(?::(\d{2}))?\s*([AaPp][Mm])?\s*(?:-|–|to)\s*(\d{1,2})(?::(\d{2}))?\s*([AaPp][Mm])?/);
+  if (!m) return 0;
+  const h24 = (h, mi, ap) => { h = +h % 12; if (ap && /p/i.test(ap)) h += 12; if (!ap && h < 7) h += 12; return h + (+mi || 0) / 60; };
+  let a = h24(m[1], m[2], m[3] || m[6]), b = h24(m[4], m[5], m[6] || m[3]);
+  if (b <= a) b += 24; return round2(b - a);
+}
+function attendantHours(job) {
+  const n = job.staffNote || ''; if (!/attend/i.test(n)) return 0;
+  const m = n.match(/(\d+(?:\.\d+)?)\s*(?:h\b|hr|hrs|hou|hour)/i);
+  return m ? Number(m[1]) : boothHours(job.booth);
+}
+function cellText(c) { if (c == null) return ''; return String(c).replace(/ /g, ' ').trim(); }
+// grid: array of rows (arrays of text). Each job is two rows: details on the first, venue/address on the second.
+function jobsFromGrid(grid) {
+  let h = grid.findIndex(r => r.some(c => /^date$/i.test(cellText(c))));
+  let d;
+  if (h >= 0) d = grid[h].findIndex(c => /^date$/i.test(cellText(c)));
+  else { h = -1; const counts = {}; grid.forEach(r => r.forEach((c, i) => { if (parseDateText(cellText(c))) counts[i] = (counts[i] || 0) + 1; })); d = Number(Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0]); if (isNaN(d)) return []; }
+  const jobs = []; const at = (r, k) => cellText((r || [])[d + k]);
+  for (let i = h + 1; i < grid.length; i++) {
+    const r = grid[i]; const date = parseDateText(at(r, 0)); if (!date) continue;
+    const r2 = grid[i + 1] && !parseDateText(at(grid[i + 1], 0)) ? grid[i + 1] : null;
+    jobs.push({ date, staffNote: d > 0 ? at(r, -1) : '', client: at(r, 1).replace(/\s+/g, ' '), phone: at(r, 2), suburb: at(r, 3), style: at(r, 4), event: at(r, 5),
+      arrival: at(r, 6), booth: at(r, 7), setup: at(r, 8), pickup: at(r, 9), contact2: at(r, 10),
+      venue: at(r2, 2).replace(/\s+/g, ' '), address: at(r2, 3).replace(/\s+/g, ' '), backdrop: at(r2, 4), props: at(r2, 5), floorplan: at(r2, 6), parking: at(r2, 7), guests: at(r2, 8), album: at(r2, 9), notes: at(r2, 10) });
+    if (r2) i++;
+  }
+  return jobs;
+}
+const sheetCfg = Object.assign({ link: (typeof DEFAULT_SHEET === 'string' ? DEFAULT_SHEET : '') }, store.get('sheet', {}));
+const sheetIdOf = link => { const m = String(link || '').match(/\/d\/([a-zA-Z0-9_-]{20,})/) || String(link || '').match(/^([a-zA-Z0-9_-]{30,})$/); return m ? m[1] : ''; };
+const tabNames = (y, m) => { const ab = MONTHS[m].toUpperCase(); return Array.from(new Set([ab, MONTH_FULL[m].toUpperCase(), MONTHS[m], MONTH_FULL[m], m === 8 ? 'SEPT' : ab, ab + ' ' + y, MONTH_FULL[m] + ' ' + y])); };
+const canReachGoogle = !window.claude; // the private Claude version cannot load Google pages
+let gvizN = 0;
+function gvizGrid(id, tab) {
+  return new Promise((resolve, reject) => {
+    const cb = '__skGviz' + (++gvizN); const sc = document.createElement('script'); let done = false;
+    const finish = (fn, v) => { if (done) return; done = true; clearTimeout(t); delete window[cb]; sc.remove(); fn(v); };
+    window[cb] = resp => {
+      if (!resp || resp.status === 'error') return finish(reject, new Error((resp && resp.errors && resp.errors[0] && (resp.errors[0].detailed_message || resp.errors[0].message)) || 'sheet error'));
+      const tb = resp.table || { cols: [], rows: [] };
+      const val = c => { if (!c) return ''; if (c.f != null) return String(c.f); const v = c.v; if (typeof v === 'string') { const m = v.match(/^Date\((\d+),(\d+),(\d+)/); return m ? isoOf(new Date(+m[1], +m[2], +m[3])) : v; } return v == null ? '' : String(v); };
+      const grid = [tb.cols.map(c => c.label || '')].concat(tb.rows.map(r => (r.c || []).map(val)));
+      finish(resolve, grid);
+    };
+    // Google sometimes answers with google.visualization.Query.setResponse(...) instead of the named callback.
+    window.google = window.google || {}; window.google.visualization = window.google.visualization || {};
+    window.google.visualization.Query = window.google.visualization.Query || {};
+    window.google.visualization.Query.setResponse = r => { const f = window[cb]; if (f) f(r); };
+    sc.onload = () => setTimeout(() => finish(reject, new Error('blocked')), 50);
+    const t = setTimeout(() => finish(reject, new Error('timeout')), 20000);
+    sc.onerror = () => finish(reject, new Error('blocked'));
+    sc.src = 'https://docs.google.com/spreadsheets/d/' + id + '/gviz/tq?tqx=' + encodeURIComponent('out:json;responseHandler:' + cb) + '&sheet=' + encodeURIComponent(tab) + '&_=' + Date.now();
+    document.head.appendChild(sc);
+  });
+}
+// Jobs for one month: from Google (cached on this device for offline use) or from an uploaded copy.
+const sheetCache = store.get('sheetCache', {}); // key "2026-10" -> { at, jobs }
+function saveSheetCache() { store.set('sheetCache', sheetCache); }
+async function loadMonth(y, m, force) {
+  const key = y + '-' + String(m + 1).padStart(2, '0');
+  const cached = sheetCache[key];
+  const id = sheetIdOf(sheetCfg.link);
+  if (!id || !canReachGoogle) { if (cached) return Object.assign({ key, offline: !canReachGoogle ? 'upload' : 'nolink' }, cached); return { key, jobs: [], missing: !id ? 'nolink' : 'private' }; }
+  if (cached && !force && Date.now() - cached.at < 5 * 60 * 1000) return Object.assign({ key }, cached);
+  try {
+    for (const tab of tabNames(y, m)) {
+      const jobs = jobsFromGrid(await gvizGrid(id, tab));
+      const inMonth = jobs.filter(j => j.date.slice(0, 7) === key);
+      if (inMonth.length && inMonth.length >= jobs.length / 2) { sheetCache[key] = { at: Date.now(), jobs: inMonth, src: 'Google Sheet, tab ' + tab }; saveSheetCache(); return Object.assign({ key }, sheetCache[key]); }
+    }
+    return Object.assign({ key, jobs: [], notab: true }, cached ? { jobs: cached.jobs, at: cached.at, src: cached.src } : {});
+  } catch (e) {
+    if (cached) return Object.assign({ key, stale: true }, cached);
+    return { key, jobs: [], error: String(e.message || e) };
+  }
+}
+async function jobsForWeek(ws, force) {
+  const we = addDays(ws, 6); const a = dateOf(ws), b = dateOf(we);
+  const months = [[a.getFullYear(), a.getMonth()]]; if (b.getMonth() !== a.getMonth()) months.push([b.getFullYear(), b.getMonth()]);
+  const res = []; for (const [y, m] of months) res.push(await loadMonth(y, m, force));
+  const jobs = res.flatMap(r => r.jobs || []).filter(j => j.date >= ws && j.date <= we).sort((x, y) => x.date.localeCompare(y.date));
+  return { jobs, res };
+}
+function sheetProblem(res) {
+  const r = res.find(x => x.missing || x.error || x.notab || x.stale);
+  if (!r) return '';
+  if (r.missing === 'nolink') return 'Add the run sheet link on the Run sheet page first.';
+  if (r.missing === 'private') return 'This private Claude version cannot open Google Sheets. Use the website, or upload the sheet on the Run sheet page.';
+  if (r.notab) return 'Could not find a ' + MONTHS[+r.key.slice(5) - 1].toUpperCase() + ' tab in the sheet.';
+  if (r.stale) return 'Could not reach the sheet, so this uses the copy saved ' + ago(r.at) + '.';
+  if (r.error === 'blocked' || r.error === 'timeout') return 'Could not open the sheet. Check your internet, and that the sheet is shared as "Anyone with the link can view".';
+  return 'The sheet could not be read (' + r.error + ').';
+}
+function ago(t) { if (!t) return ''; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; }
+function weekSummary(jobs) {
+  const att = jobs.map(j => ({ j, h: attendantHours(j) })).filter(x => x.h > 0);
+  return { count: jobs.length, days: daysText(jobs.map(j => j.date)), attHours: round2(att.reduce((s, x) => s + x.h, 0)), att };
+}
+
+/* run sheet page */
+let rs = { y: null, m: null, week: null, data: null, loading: false };
+function renderRunSheet() {
+  if (rs.y == null) { const ws = invoiceWeekStart(todayISO()); rs.week = ws; const d = dateOf(ws); rs.y = d.getFullYear(); rs.m = d.getMonth(); }
+  const key = rs.y + '-' + String(rs.m + 1).padStart(2, '0');
+  const data = rs.data && rs.data.key === key ? rs.data : null;
+  const jobs = data ? data.jobs || [] : [];
+  // weeks touching this month
+  const first = isoOf(new Date(rs.y, rs.m, 1)), last = isoOf(new Date(rs.y, rs.m + 1, 0)); const weeks = []; for (let w = mondayOf(first); w <= last; w = addDays(w, 7)) weeks.push(w);
+  const invWs = invoiceWeekStart(todayISO());
+  const shown = rs.week && weeks.includes(rs.week) ? jobs.filter(j => j.date >= rs.week && j.date <= addDays(rs.week, 6)) : jobs;
+  const byDay = {}; shown.forEach(j => (byDay[j.date] = byDay[j.date] || []).push(j));
+  const sum = weekSummary(shown);
+  const prob = data ? sheetProblem([data]) : '';
+  $('view').innerHTML =
+    '<div class="pagehead"><div><h1>Run sheet</h1><p>' + (data && data.src ? esc(data.src) + (data.at ? ' · updated ' + esc(ago(data.at)) : '') : 'Jobs from the team run sheet.') + '</p></div>' +
+    '<div class="actions"><button class="secondary" type="button" id="rsPrev" aria-label="Previous month">‹</button><b class="monthname">' + MONTH_FULL[rs.m] + ' ' + rs.y + '</b><button class="secondary" type="button" id="rsNext" aria-label="Next month">›</button>' +
+    (canReachGoogle && sheetIdOf(sheetCfg.link) ? '<button class="secondary" type="button" id="rsRefresh">' + (rs.loading ? 'Loading…' : 'Refresh') + '</button>' : '') + '</div></div>' +
+    (prob ? '<p class="notice warn">' + esc(prob) + '</p>' : '') +
+    '<div class="weekchips"><button type="button" class="wchip" data-w=""' + (!rs.week || !weeks.includes(rs.week) ? ' aria-pressed="true"' : '') + '>Whole month</button>' +
+      weeks.map(w => '<button type="button" class="wchip" data-w="' + w + '"' + (rs.week === w ? ' aria-pressed="true"' : '') + '>' + esc(weekLabel(w).replace(/ \d{4}$/, '')) + (w === invWs ? ' <span class="tag">This Thursday\'s invoice</span>' : '') + '</button>').join('') + '</div>' +
+    '<div class="tiles small"><div class="tile"><span class="k">Jobs</span><span class="v">' + sum.count + '</span><span class="sub">' + esc(rs.week && weeks.includes(rs.week) ? weekLabel(rs.week) : MONTH_FULL[rs.m]) + '</span></div>' +
+      '<div class="tile"><span class="k">Days with jobs</span><span class="v">' + Object.keys(byDay).length + '</span><span class="sub">' + esc(sum.days || '—') + '</span></div>' +
+      '<div class="tile"><span class="k">Attendant hours</span><span class="v">' + fmtNum(sum.attHours) + ' hrs</span><span class="sub">' + sum.att.length + ' job' + (sum.att.length === 1 ? '' : 's') + ' with an attendant</span></div>' +
+      (rs.week && weeks.includes(rs.week) && shown.length ? '<div class="tile tileact"><span class="k">Invoice for this week</span><button class="primary" type="button" id="rsInvoice">Make invoice</button><span class="sub">Fills in ' + sum.count + ' events' + (sum.attHours ? ' and ' + fmtNum(sum.attHours) + ' attendant hrs' : '') + '</span></div>' : '') + '</div>' +
+    (rs.loading && !data ? '<p class="empty">Loading the run sheet…</p>' : !shown.length ? '<section class="card"><p class="empty">' + (data && !prob ? 'No jobs on the run sheet for this ' + (rs.week && weeks.includes(rs.week) ? 'week' : 'month') + '.' : 'Nothing to show yet.') + '</p></section>' :
+      Object.keys(byDay).sort().map(day => '<section class="dayblock"><h3>' + esc(dayLabel(day)) + ' <span>' + byDay[day].length + ' job' + (byDay[day].length === 1 ? '' : 's') + '</span></h3><div class="jobs">' + byDay[day].map(jobCard).join('') + '</div></section>').join('')) +
+    '<section class="card"><h2>Where the run sheet comes from</h2>' +
+      (canReachGoogle ? '<div class="fields"><label class="f" style="grid-column:1/-1">Google Sheet link<input id="rsLink" type="url" placeholder="https://docs.google.com/spreadsheets/d/…" value="' + esc(sheetCfg.link) + '"></label></div>' +
+        '<div class="actions" style="margin-top:10px"><button class="secondary" type="button" id="rsSave">Save link</button></div>' +
+        '<p class="hint">The sheet must be shared as "Anyone with the link can view". The link is saved on this device only. Each month needs its own tab named like SEP or OCT.</p>'
+      : '<p class="hint">This private Claude version cannot open Google Sheets. Use the website for that, or upload a copy here.</p>') +
+      '<div class="actions" style="margin-top:10px"><label class="secondary filebtn" for="rsFile">Upload the sheet (.xlsx or .csv)</label><input id="rsFile" type="file" accept=".xlsx,.xls,.csv" hidden></div>' +
+      '<p class="hint">In Google Sheets: File → Download → Microsoft Excel (.xlsx). Every month tab in the file is read. This works without the link.</p><p class="status' + (rs.msg ? ' ' + rs.msg.kind : '') + '" id="status" role="status">' + esc(rs.msg ? rs.msg.text : '') + '</p></section>';
+  $('rsPrev').addEventListener('click', () => { const d = new Date(rs.y, rs.m - 1, 1); rs.y = d.getFullYear(); rs.m = d.getMonth(); rs.week = null; rs.data = null; renderRunSheet(); fetchRs(false); });
+  $('rsNext').addEventListener('click', () => { const d = new Date(rs.y, rs.m + 1, 1); rs.y = d.getFullYear(); rs.m = d.getMonth(); rs.week = null; rs.data = null; renderRunSheet(); fetchRs(false); });
+  if ($('rsRefresh')) $('rsRefresh').addEventListener('click', () => fetchRs(true));
+  document.querySelectorAll('.wchip').forEach(b => b.addEventListener('click', () => { rs.week = b.dataset.w || null; renderRunSheet(); }));
+  if ($('rsInvoice')) $('rsInvoice').addEventListener('click', () => { draft = freshDraft(); draft.date = todayISO(); applyWeek(draft, rs.week, shown); store.set('draft', draft); go({ name: 'edit' }); });
+  if ($('rsSave')) $('rsSave').addEventListener('click', () => { const v = $('rsLink').value.trim(); if (v && !sheetIdOf(v)) { say('That does not look like a Google Sheets link.', 'bad'); return; } sheetCfg.link = v; store.set('sheet', { link: v }); rs.msg = { text: v ? 'Link saved.' : 'Link removed.', kind: 'ok' }; fetchRs(true); });
+  $('rsFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) uploadSheet(f); });
+  if (!data && !rs.loading) fetchRs(false);
+}
+function jobCard(j) {
+  const att = attendantHours(j);
+  const line = (k, v) => v ? '<div><dt>' + k + '</dt><dd>' + esc(v) + '</dd></div>' : '';
+  return '<article class="job"><header><b>' + esc(j.booth || 'Time not set') + '</b>' + (j.style ? '<span class="pill neutral">' + esc(j.style) + '</span>' : '') + (att ? '<span class="pill att">Attendant ' + fmtNum(att) + ' hrs</span>' : (j.staffNote ? '<span class="pill neutral">' + esc(j.staffNote) + '</span>' : '')) + '</header>' +
+    '<p class="jt">' + esc(j.client || 'Client') + (j.event ? ' · ' + esc(j.event) : '') + '</p>' +
+    '<p class="jv">' + esc([j.venue, j.address || j.suburb].filter(Boolean).join(', ')) + '</p>' +
+    '<dl>' + line('Set up', j.setup) + line('Guests arrive', j.arrival) + line('Pick up', j.pickup) + line('Backdrop', j.backdrop) + line('Phone', j.phone) + line('Contact', j.contact2) + line('Parking', j.parking) + line('Album', j.album) + line('Props', j.props) + line('Notes', [j.floorplan, j.notes].filter(Boolean).join(' · ')) + '</dl></article>';
+}
+async function fetchRs(force) {
+  const y = rs.y, m = rs.m; rs.loading = true; if (route.name === 'runsheet') renderRunSheet();
+  const r = await loadMonth(y, m, force);
+  rs.loading = false; if (rs.y === y && rs.m === m) rs.data = r;
+  if (route.name === 'runsheet') renderRunSheet();
+}
+async function uploadSheet(f) {
+  try {
+    let grids = [];
+    if (/\.csv$/i.test(f.name)) grids.push({ name: f.name, grid: csvRows(await f.text()) });
+    else { await loadLib('xlsx', 'XLSX'); const wb = window.XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: false });
+      wb.SheetNames.forEach(n => grids.push({ name: n, grid: window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: false, defval: '' }) })); }
+    let total = 0; const months = new Set();
+    const now = Date.now();
+    const bucket = {};
+    grids.forEach(g => jobsFromGrid(g.grid).forEach(j => { const k = j.date.slice(0, 7); (bucket[k] = bucket[k] || []).push(j); }));
+    Object.keys(bucket).forEach(k => { sheetCache[k] = { at: now, jobs: bucket[k], src: 'Uploaded file ' + f.name }; months.add(k); total += bucket[k].length; });
+    saveSheetCache();
+    rs.data = null; rs.msg = { text: total ? 'Read ' + total + ' jobs across ' + months.size + ' month' + (months.size === 1 ? '' : 's') + ' from ' + f.name + '.' : 'No jobs with dates were found in ' + f.name + '.', kind: total ? 'ok' : 'bad' }; renderRunSheet();
+  } catch (e) { rs.msg = { text: 'Could not read that file. Save it from Google Sheets as .xlsx and try again.', kind: 'bad' }; renderRunSheet(); }
+}
+function csvRows(t) { const rows = []; let row = [], cur = '', q = false; for (let i = 0; i < t.length; i++) { const c = t[i]; if (q) { if (c === '"') { if (t[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; } else if (c === '"') q = true; else if (c === ',') { row.push(cur); cur = ''; } else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; } else cur += c; } if (cur || row.length) { row.push(cur); rows.push(row); } return rows; }
+
+// Put a week's jobs into an invoice draft.
+function applyWeek(inv, ws, jobs) {
+  const s = weekSummary(jobs);
+  const setRow = (test, preset, qty) => { let r = inv.rows.find(test); if (!r && qty) { r = PRESETS[preset](); const fuelAt = inv.rows.findIndex(isFuel); if (fuelAt >= 0) inv.rows.splice(fuelAt, 0, r); else inv.rows.push(r); } if (r) { r.qty = qty ? String(qty) : ''; delete r.fixedAmount; } };
+  setRow(isEvent, 'event', s.count);
+  setRow(isAttendant, 'attendant', s.attHours);
+  inv.hoursDays = s.days; inv.weekStart = ws; delete inv.totalOverride;
+  return s;
+}
+
 /* ---------- import invoices made in Word (.docx) or saved as PDF ---------- */
-const LIBS = { jszip: "jszip.min.js", pdf: "pdf.min.js", pdfworker: "pdf.worker.min.js" };
+const LIBS = { jszip: "jszip.min.js", pdf: "pdf.min.js", pdfworker: "pdf.worker.min.js", xlsx: "xlsx.full.min.js" };
 const libLoads = {};
 function loadLib(key, globalName) {
   if (window[globalName]) return Promise.resolve();
