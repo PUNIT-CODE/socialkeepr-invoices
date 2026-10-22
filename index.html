@@ -177,7 +177,8 @@ input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); ou
 .items .num { font-family: var(--font-num); text-align: right; }
 .iconbtn { background: none; border: 1px solid transparent; color: var(--muted); border-radius: 6px; cursor: pointer; width: 32px; height: 32px; font-size: 18px; line-height: 1; }
 .iconbtn:hover { color: var(--accent); border-color: var(--line); }
-.addrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.addrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+.addlabel { font-size: 13px; color: var(--muted); margin-right: 2px; }
 button.chip { font-size: 13px; padding: 7px 12px; border-radius: 999px; border: 1px dashed var(--line); background: var(--field); color: var(--fg); cursor: pointer; }
 button.chip:hover { border-color: var(--accent); color: var(--accent); }
 .totals { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
@@ -306,11 +307,25 @@ $('navRun').addEventListener('click', () => go({ name: 'runsheet' }));
 $('navNew').addEventListener('click', () => { draft = freshDraft(); store.set('draft', draft); go({ name: 'edit' }); });
 $('listToggle').addEventListener('click', () => { const s = $('side'); const open = s.classList.toggle('collapsed') === false; $('listToggle').setAttribute('aria-expanded', String(open)); $('listToggle').textContent = open ? 'Hide' : 'Show'; });
 
+// The most recent row matching a test, from saved invoices (newest first).
+function lastRow(test) { for (const inv of invoices.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.no || 0) - (a.no || 0))) { const r = (inv.rows || []).find(test); if (r) return r; } return null; }
+// Optional extras offered as quick-add buttons: attendant plus anything billed before (Uber, albums, glue & pens …), with the last rate used.
+function extraItems() {
+  const seen = new Map();
+  invoices.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).forEach(inv => (inv.rows || []).forEach(r => {
+    const d = (r.desc || '').trim(); if (!d || isEvent(r) || isFuel(r)) return;
+    const key = d.toLowerCase().replace(/\s*\([ivx\d]+\)\s*$/, '');
+    if (!seen.has(key)) seen.set(key, { desc: d.replace(/\s*\([ivx\d]+\)\s*$/, ''), unit: r.unit || '', rate: r.rate === '' || r.rate == null ? '' : r.rate });
+  }));
+  if (![...seen.keys()].some(k => /attendant/.test(k))) seen.set('attendant', { desc: 'Attendant', unit: 'hrs', rate: 30 });
+  return [...seen.values()].sort((a, b) => (/attendant/i.test(b.desc) ? 1 : 0) - (/attendant/i.test(a.desc) ? 1 : 0) || a.desc.localeCompare(b.desc));
+}
 function freshDraft() {
   const last = sorted()[0];
-  const rows = last ? clone(last.rows || []).map(r => ({ desc: r.desc, qty: '', unit: r.unit, rate: isFuel(r) ? '' : r.rate })) : [
-    { desc: 'Photo Booth Events', qty: '', unit: 'Events', rate: 150 },
-    { desc: 'Attendant', qty: '', unit: 'hrs', rate: 30 },
+  // Every week has events and fuel. Everything else (attendant, Uber, albums …) is added only when needed.
+  const ev = lastRow(isEvent);
+  const rows = [
+    { desc: ev ? ev.desc : 'Photo Booth Events', qty: '', unit: ev ? ev.unit || 'Events' : 'Events', rate: ev && ev.rate !== '' ? ev.rate : 150 },
     { desc: 'Fuel (i)', qty: '', unit: 'L', rate: '' }
   ];
   return { no: nextNo(), date: todayISO(), billedTo: last ? last.billedTo : 'Social Keepr', services: last ? last.services : 'Photo Booth Event Services',
@@ -510,7 +525,7 @@ async function downloadPdf(inv) {
 /* ---------- editor ---------- */
 const PRESETS = {
   event: () => ({ desc: 'Photo Booth Events', qty: '', unit: 'Events', rate: 150 }),
-  attendant: () => ({ desc: 'Attendant', qty: '', unit: 'hrs', rate: 30 }),
+  attendant: () => { const r = lastRow(isAttendant); return { desc: r ? r.desc.replace(/\s*\([ivx\d]+\)\s*$/, '') : 'Attendant', qty: '', unit: r ? r.unit || 'hrs' : 'hrs', rate: r && r.rate !== '' ? r.rate : 30 }; },
   fuel: () => ({ desc: 'Fuel (' + roman(draft.rows.filter(isFuel).length + 1) + ')', qty: '', unit: 'L', rate: '' }),
   custom: () => ({ desc: '', qty: '', unit: '', rate: '' })
 };
@@ -532,7 +547,7 @@ function renderEditor() {
       '<section class="card"><h2>From the run sheet</h2><div class="sheetbox"><p>Week: <b id="wkLabel"></b></p><div class="actions"><input id="fWeek" type="date" aria-label="Any day in the week" style="width:auto"><button class="secondary" type="button" id="bFill">Fill in jobs from the run sheet</button></div></div><p class="status" id="fillMsg" role="status"></p></section>' +
       '<section class="card"><h2>What you are charging for</h2>' +
         '<div class="tablebox"><table class="items" aria-label="Line items"><thead><tr><th style="width:34%">Description</th><th style="width:14%">Quantity</th><th style="width:14%">Unit</th><th style="width:16%">Rate ($)</th><th style="width:16%;text-align:right">Amount</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>' +
-        '<div class="addrow"><button class="chip" type="button" data-add="event">+ Photo booth events</button><button class="chip" type="button" data-add="attendant">+ Attendant hours</button><button class="chip" type="button" data-add="fuel">+ Fuel</button><button class="chip" type="button" data-add="custom">+ Other</button></div>' +
+        '<div class="addrow"><span class="addlabel">Add if needed:</span>' + extraItems().map((x, k) => '<button class="chip" type="button" data-add="x' + k + '">+ ' + esc(x.desc) + '</button>').join('') + '<button class="chip" type="button" data-add="fuel">+ More fuel</button><button class="chip" type="button" data-add="custom">+ Something else</button></div>' +
         '<div id="overrideBox"></div>' +
         '<div class="totals"><span>Total</span><span class="v" id="tSub"></span>' +
         '<label class="check" for="fGst"><input id="fGst" type="checkbox"> Add GST (10%)</label><span class="v" id="tGst"></span>' +
@@ -552,9 +567,15 @@ function renderEditor() {
   $('fName').value = profile.name || ''; $('fTfn').value = profile.tfn || '';
   $('fName').addEventListener('input', e => { profile.name = e.target.value; store.set('profile', profile); edited(); });
   $('fTfn').addEventListener('input', e => { profile.tfn = e.target.value; store.set('profile', profile); edited(); });
+  const extras = extraItems();
   document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => {
-    draft.rows.push(PRESETS[b.dataset.add]()); delete draft.totalOverride; renderRows(); edited();
-    const i = draft.rows.length - 1; const t = $(b.dataset.add === 'custom' ? 'd' + i : 'q' + i); if (t) t.focus(); }));
+    const a = b.dataset.add; let row;
+    if (a[0] === 'x') { const x = extras[+a.slice(1)]; row = { desc: x.desc, qty: '', unit: x.unit, rate: x.rate }; }
+    else row = PRESETS[a]();
+    const fuelAt = draft.rows.findIndex(isFuel);
+    if (a !== 'fuel' && a !== 'custom' && fuelAt >= 0) draft.rows.splice(fuelAt, 0, row); else draft.rows.push(row);
+    delete draft.totalOverride; renderRows(); edited();
+    const i = draft.rows.indexOf(row); const t = $(a === 'custom' ? 'd' + i : 'q' + i); if (t) t.focus(); }));
   $('bSave').addEventListener('click', () => trySave(false));
   $('bSaveDl').addEventListener('click', () => trySave(true));
   if ($('bCancel')) $('bCancel').addEventListener('click', () => { const no = draft.editing; draft = null; store.del('draft'); go({ name: 'inv', no }); });
@@ -853,7 +874,7 @@ function csvRows(t) { const rows = []; let row = [], cur = '', q = false; for (l
 // Put a week's jobs into an invoice draft.
 function applyWeek(inv, ws, jobs) {
   const s = weekSummary(jobs);
-  const setRow = (test, preset, qty) => { let r = inv.rows.find(test); if (!r && qty) { r = PRESETS[preset](); const fuelAt = inv.rows.findIndex(isFuel); if (fuelAt >= 0) inv.rows.splice(fuelAt, 0, r); else inv.rows.push(r); } if (r) { r.qty = qty ? String(qty) : ''; delete r.fixedAmount; } };
+  const setRow = (test, preset, qty) => { let r = inv.rows.find(test); if (!r && qty) { r = PRESETS[preset](); const fuelAt = inv.rows.findIndex(isFuel); if (fuelAt >= 0) inv.rows.splice(fuelAt, 0, r); else inv.rows.push(r); } if (r) { r.qty = qty ? String(qty) : ''; delete r.fixedAmount; if (!qty && preset !== 'event') inv.rows.splice(inv.rows.indexOf(r), 1); } };
   setRow(isEvent, 'event', s.count);
   setRow(isAttendant, 'attendant', s.attHours);
   inv.hoursDays = s.days; inv.weekStart = ws; delete inv.totalOverride;
