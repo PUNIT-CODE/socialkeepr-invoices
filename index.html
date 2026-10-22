@@ -124,6 +124,22 @@ h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: v
 .twocol { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
 @media (min-width: 1300px) { .twocol { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); } }
 .empty { color: var(--muted); font-size: 14px; margin: 0; }
+.drop { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; border: 2px dashed var(--line); border-radius: 12px; padding: 34px 16px; cursor: pointer; background: var(--field); }
+.drop b { color: var(--accent); font-size: 16px; }
+.drop span { color: var(--muted); font-size: 14px; }
+.drop.over, .drop:hover { border-color: var(--accent); }
+.imptable { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 760px; }
+.imptable th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; padding: 0 8px 8px; }
+.imptable th.r, .imptable td.r { text-align: right; }
+.imptable td { padding: 7px 8px; border-top: 1px solid var(--line); vertical-align: middle; }
+.imptable td.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.imptable td.fn { max-width: 230px; overflow-wrap: anywhere; }
+.imptable td.nt { color: var(--muted); font-size: 13px; }
+.imptable input[type=number] { width: 80px; } .imptable input[type=date] { width: 150px; }
+.imptable input[type=checkbox] { width: auto; }
+.imptable tr.lv-check td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+.imptable tr.lv-bad td:first-child { box-shadow: inset 3px 0 0 var(--warn); } .imptable tr.lv-bad td.nt { color: var(--warn); }
+button[disabled] { opacity: .5; cursor: not-allowed; }
 
 /* editor */
 .editor { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
@@ -179,6 +195,7 @@ button.danger:hover { border-color: var(--warn); }
     <nav class="nav" aria-label="Main">
       <button class="navbtn new" type="button" id="navNew">+ New invoice</button>
       <button class="navbtn" type="button" id="navDash">Dashboard</button>
+      <button class="navbtn" type="button" id="navImport">Import old invoices</button>
     </nav>
     <div class="listhead"><span id="listCount">Invoices</span><button class="listtoggle" type="button" id="listToggle" aria-expanded="false">Show</button></div>
     <ul class="invlist" id="invList"></ul>
@@ -212,7 +229,7 @@ function aud(n) { return round2(n).toLocaleString('en-AU', { minimumFractionDigi
 function rateStr(n) { const s = (Math.round(n * 1000) / 1000).toFixed(3).replace(/0+$/, '').replace(/\.$/, ''); const [a,b] = s.split('.'); return '$' + Number(a).toLocaleString('en-AU') + (b ? '.' + b : ''); }
 function qtyStr(r) { const q = r.qty === '' || r.qty == null ? '' : String(r.qty); const u = (r.unit || '').trim(); if (!q) return ''; if (!u) return q; return u.length <= 1 ? q + u : q + ' ' + u; }
 function roman(n) { return ['i','ii','iii','iv','v','vi','vii','viii','ix','x','xi','xii'][n-1] || String(n); }
-function amountOf(r) { return round2(num(r.qty) * num(r.rate)); }
+function amountOf(r) { return r.fixedAmount != null ? round2(num(r.fixedAmount)) : round2(num(r.qty) * num(r.rate)); } // fixedAmount: the amount typed on an imported invoice
 function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
 const isFuel = r => /fuel/i.test(r.desc || '');
@@ -265,6 +282,7 @@ let route = { name: 'dash' };
 let draft = null;           // the invoice open in the editor
 function go(r) { route = r; if (window.innerWidth < 900) $('side').classList.add('collapsed'), $('listToggle').setAttribute('aria-expanded', 'false'), $('listToggle').textContent = 'Show'; render(); window.scrollTo(0, 0); }
 $('navDash').addEventListener('click', () => go({ name: 'dash' }));
+$('navImport').addEventListener('click', () => go({ name: 'import' }));
 $('navNew').addEventListener('click', () => { draft = freshDraft(); store.set('draft', draft); go({ name: 'edit' }); });
 $('listToggle').addEventListener('click', () => { const s = $('side'); const open = s.classList.toggle('collapsed') === false; $('listToggle').setAttribute('aria-expanded', String(open)); $('listToggle').textContent = open ? 'Hide' : 'Show'; });
 
@@ -284,10 +302,12 @@ function render() { renderSide(); const v = $('view');
   if (route.name === 'dash') v.innerHTML = dashHTML(), wireDash();
   else if (route.name === 'edit') renderEditor();
   else if (route.name === 'inv') renderInvoice(route.no);
+  else if (route.name === 'import') renderImport();
 }
 
 function renderSide() {
   $('navDash').setAttribute('aria-current', route.name === 'dash' ? 'page' : 'false');
+  $('navImport').setAttribute('aria-current', route.name === 'import' ? 'page' : 'false');
   const list = $('invList'); const all = sorted();
   $('listCount').textContent = 'Invoices' + (loaded ? ' (' + all.length + ')' : '');
   if (!loaded) { list.innerHTML = '<li class="sidenote">Loading your invoices…</li>'; }
@@ -315,7 +335,7 @@ function dashHTML() {
   const s = stats(); const avg = s.count ? s.total / s.count : 0;
   const recent = sorted().slice(0, 6);
   return '<div class="pagehead"><div><h1>Dashboard</h1><p>Everything you have invoiced, worked out from the invoices saved on this device.</p></div>' +
-    '<button class="primary" type="button" id="dashNew">+ New invoice</button></div>' +
+    '<div class="actions"><button class="secondary" type="button" id="dashImport">Import old invoices</button><button class="primary" type="button" id="dashNew">+ New invoice</button></div></div>' +
     '<div class="tiles">' +
       tile('Total invoiced', money(s.total), s.count + ' invoice' + (s.count === 1 ? '' : 's') + ' all time', 'hero') +
       tile('Paid so far', money(s.paid), 'Money already received') +
@@ -334,14 +354,16 @@ function dashHTML() {
         recent.map(i => '<tr class="click" data-no="' + esc(i.no) + '" tabindex="0"><td class="num">#' + esc(i.no) + '</td><td>' + esc(fmtDate(i.date)) + '</td><td>' + pill(i.paid) + '</td><td class="r num">' + esc(money(totalsOf(i).all)) + '</td></tr>').join('') +
         '</tbody></table></div>' : '<p class="empty">Invoices you save will show up here.</p>') + '</section>' +
     '</div>' +
-    (invoices.some(i => i.totalOverride != null) ? '<p class="notice warn">Invoice ' + invoices.filter(i => i.totalOverride != null).map(i => '#' + i.no).join(', ') + ' uses the total typed into the original Word file, which does not match its own line items. Open it to check.</p>' : '');
+    (invoices.some(i => i.totalOverride != null) ? '<p class="notice warn">Invoice ' + invoices.filter(i => i.totalOverride != null).map(i => '#' + i.no).join(', ') + ' ' + (invoices.filter(i => i.totalOverride != null).length === 1 ? 'uses' : 'use') + ' the total typed on the original invoice, which does not match its own line items. Open it to check.</p>' : '');
 }
 function fmtNum(n) { return round2(n).toLocaleString('en-AU', { maximumFractionDigits: 2 }); }
 function tile(k, v, sub, cls) { return '<div class="tile' + (cls ? ' ' + cls : '') + '"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span><span class="sub">' + esc(sub) + '</span></div>'; }
 function pill(paid) { return '<span class="pill ' + (paid ? 'paid' : 'unpaid') + '">' + (paid ? 'Paid' : 'Not paid') + '</span>'; }
 function chartSVG(byMonth) {
   const now = new Date(); const months = [];
-  for (let k = 11; k >= 0; k--) { const d = new Date(now.getFullYear(), now.getMonth() - k, 1); const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); months.push({ key, label: MONTHS[d.getMonth()], year: d.getFullYear(), v: round2(byMonth[key] || 0) }); }
+  const first = invoices.map(i => i.date).filter(Boolean).sort()[0];
+  let span = 12; if (first) { const [fy, fm] = first.split('-').map(Number); span = Math.min(24, Math.max(12, (now.getFullYear() - fy) * 12 + (now.getMonth() + 1 - fm) + 1)); }
+  for (let k = span - 1; k >= 0; k--) { const d = new Date(now.getFullYear(), now.getMonth() - k, 1); const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); months.push({ key, label: MONTHS[d.getMonth()], year: d.getFullYear(), v: round2(byMonth[key] || 0) }); }
   const W = 640, H = 240, padL = 56, padR = 8, padT = 14, padB = 34;
   const max = Math.max(...months.map(m => m.v), 0);
   const step = niceStep(max / 4 || 250); const top = Math.max(step * 4, step * Math.ceil(max / step));
@@ -353,14 +375,16 @@ function chartSVG(byMonth) {
   months.forEach((m, i) => { const cx = padL + bw * i + bw / 2; const x = cx - barW / 2; const h = H - padB - y(m.v);
     if (m.v > 0) { const r = Math.min(4, h); const yt = y(m.v), yb = H - padB;
       g += '<path d="M' + x + ',' + yb + ' V' + (yt + r) + ' Q' + x + ',' + yt + ' ' + (x + r) + ',' + yt + ' H' + (x + barW - r) + ' Q' + (x + barW) + ',' + yt + ' ' + (x + barW) + ',' + (yt + r) + ' V' + yb + ' Z" fill="var(--accent)"/>'; }
-    g += '<text x="' + cx + '" y="' + (H - padB + 16) + '" text-anchor="middle" font-size="11" fill="var(--muted)">' + m.label + '</text>';
+    if (months.length <= 12 || i % 2 === (months.length - 1) % 2) g += '<text x="' + cx + '" y="' + (H - padB + 16) + '" text-anchor="middle" font-size="11" fill="var(--muted)">' + m.label + '</text>';
     if (i === 0 || m.label === 'Jan') g += '<text x="' + cx + '" y="' + (H - padB + 29) + '" text-anchor="middle" font-size="10" fill="var(--muted)">' + m.year + '</text>';
     g += '<rect class="hit" x="' + (padL + bw * i) + '" y="' + padT + '" width="' + bw + '" height="' + (H - padT - padB) + '" fill="transparent" data-i="' + i + '" data-cx="' + cx + '" data-cy="' + y(m.v) + '" data-txt="' + esc(m.label + ' ' + m.year + ': ' + money(m.v)) + '"/>'; });
   g += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + (H - padB) + '" y2="' + (H - padB) + '" stroke="var(--line)" stroke-width="1"/>';
-  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Amount invoiced in each of the last 12 months">' + g + '</svg><div class="tip" id="tip" hidden></div>';
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Amount invoiced each month">' + g + '</svg><div class="tip" id="tip" hidden></div>';
 }
 function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))); const f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
 function wireDash() {
+  if (flashDash) { const p = document.createElement('p'); p.className = 'notice'; p.textContent = flashDash; flashDash = null; $('view').insertBefore(p, $('view').children[1]); }
+  const il = $('dashImport'); if (il) il.addEventListener('click', () => go({ name: 'import' }));
   const n = $('dashNew'); if (n) n.addEventListener('click', () => $('navNew').click());
   document.querySelectorAll('.recent tr.click').forEach(tr => { const open = () => go({ name: 'inv', no: Number(tr.dataset.no) }); tr.addEventListener('click', open); tr.addEventListener('keydown', e => { if (e.key === 'Enter') open(); }); });
   const wrap = $('chartwrap'); if (!wrap) return; const svg = wrap.querySelector('svg'); const tip = $('tip');
@@ -521,7 +545,7 @@ function renderRows() {
       '<td><input id="u' + i + '" type="text" aria-label="Unit"></td><td><input id="r' + i + '" class="num" type="text" inputmode="decimal" aria-label="Rate"></td>' +
       '<td class="amt" id="a' + i + '"></td><td><button class="iconbtn" type="button" aria-label="Remove row" title="Remove row">×</button></td>';
     tb.appendChild(tr);
-    [['d','desc'],['q','qty'],['u','unit'],['r','rate']].forEach(([p, k]) => { const el = $(p + i); el.value = r[k] ?? ''; el.addEventListener('input', () => { r[k] = el.value; if (k !== 'desc' && k !== 'unit') delete draft.totalOverride; edited(); }); });
+    [['d','desc'],['q','qty'],['u','unit'],['r','rate']].forEach(([p, k]) => { const el = $(p + i); el.value = r[k] ?? ''; el.addEventListener('input', () => { r[k] = el.value; if (k !== 'desc' && k !== 'unit') { delete draft.totalOverride; delete r.fixedAmount; } edited(); }); });
     tr.querySelector('button').addEventListener('click', () => { draft.rows.splice(i, 1); delete draft.totalOverride; renderRows(); edited(); });
   });
 }
@@ -588,6 +612,7 @@ function renderInvoice(no) {
     try { await saveInvoice(rec); flash = { msg: rec.paid ? 'Marked as paid.' : 'Marked as not paid.', ok: true }; render(); } catch (e) { say('Could not update it. Try again.', 'bad'); } });
   $('vEdit').addEventListener('click', () => { draft = clone(inv); draft.editing = inv.no; go({ name: 'edit' }); });
   $('vCopy').addEventListener('click', () => { draft = clone(inv); delete draft.totalOverride; delete draft.note; delete draft.paidAt; delete draft.createdAt; delete draft.updatedAt;
+    draft.rows.forEach(r => delete r.fixedAmount); delete draft.importedFrom;
     draft.no = nextNo(); draft.date = todayISO(); draft.paid = false; draft.editing = null; store.set('draft', draft); go({ name: 'edit' }); });
   $('vDel').addEventListener('click', () => {
     $('confirmBox').innerHTML = '<div class="confirm">Delete invoice ' + esc(inv.no) + ' for good?<button class="danger" type="button" id="cYes">Delete</button><button class="secondary" type="button" id="cNo">Keep it</button></div>';
@@ -595,6 +620,188 @@ function renderInvoice(no) {
     $('cYes').addEventListener('click', async () => { try { await deleteInvoice(inv.no); go({ name: 'dash' }); } catch (e) { say('Could not delete it. Try again.', 'bad'); } });
   });
 }
+
+/* ---------- import invoices made in Word (.docx) or saved as PDF ---------- */
+const LIBS = { jszip: "jszip.min.js", pdf: "pdf.min.js", pdfworker: "pdf.worker.min.js" };
+const libLoads = {};
+function loadLib(key, globalName) {
+  if (window[globalName]) return Promise.resolve();
+  if (!LIBS || !LIBS[key]) return Promise.reject(new Error('missing ' + key));
+  if (!libLoads[key]) libLoads[key] = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = LIBS[key]; sc.onload = res; sc.onerror = () => { delete libLoads[key]; rej(new Error('load ' + key)); }; document.head.appendChild(sc); });
+  return libLoads[key];
+}
+async function readDocx(file) {
+  await loadLib('jszip', 'JSZip');
+  const zip = await window.JSZip.loadAsync(await file.arrayBuffer());
+  const f = zip.file('word/document.xml'); if (!f) throw new Error('Not a Word document');
+  const xml = new DOMParser().parseFromString(await f.async('string'), 'application/xml');
+  const body = xml.getElementsByTagNameNS('*', 'body')[0]; const lines = [], tables = [];
+  const paraText = p => { let s = ''; p.querySelectorAll('*').forEach(n => { const ln = n.localName; if (ln === 't') s += n.textContent; else if (ln === 'tab') s += ' '; else if (ln === 'br' || ln === 'cr') s += '\n'; }); return s; };
+  const walk = el => { Array.from(el.children).forEach(c => {
+    if (c.localName === 'p') paraText(c).split('\n').forEach(l => lines.push(l));
+    else if (c.localName === 'tbl') { const rows = []; Array.from(c.children).filter(r => r.localName === 'tr').forEach(tr => { rows.push(Array.from(tr.children).filter(tc => tc.localName === 'tc').map(tc => Array.from(tc.getElementsByTagNameNS('*', 'p')).map(paraText).join(' ').replace(/\s+/g, ' ').trim())); }); tables.push(rows); lines.push('[table]'); }
+    else if (c.localName === 'sdt' || c.localName === 'sdtContent') walk(c); }); };
+  walk(body);
+  return { lines, tables };
+}
+async function readPdf(file) {
+  await loadLib('pdf', 'pdfjsLib'); await loadLib('pdfworker', 'pdfjsWorker');
+  const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+  const lines = [], tables = [];
+  for (let pn = 1; pn <= Math.min(pdf.numPages, 3); pn++) {
+    const page = await pdf.getPage(pn); const tc = await page.getTextContent();
+    const items = tc.items.filter(i => i.str && i.str.trim()).map(i => ({ s: i.str, x: i.transform[4], y: i.transform[5], w: i.width }));
+    items.sort((a, b) => b.y - a.y || a.x - b.x);
+    const rows = [];
+    items.forEach(it => { const r = rows.find(r => Math.abs(r.y - it.y) < 3); if (r) r.items.push(it); else rows.push({ y: it.y, items: [it] }); });
+    rows.forEach(r => r.items.sort((a, b) => a.x - b.x));
+    // table: header row has Description … Amount; rows run until a line that starts with "Total"
+    let hi = rows.findIndex(r => /description/i.test(r.items.map(i => i.s).join(' ')) && /amount/i.test(r.items.map(i => i.s).join(' ')) && !/services/i.test(r.items.map(i => i.s).join(' ')));
+    const tableRows = [];
+    rows.forEach((r, idx) => {
+      const txt = r.items.map(i => i.s).join(' ').replace(/\s+/g, ' ').trim();
+      if (hi >= 0 && idx === hi) { lines.push('[table]'); return; }
+      if (hi >= 0 && idx > hi && !tableRows.done) {
+        if (/^total\b/i.test(txt) || /^gst\b/i.test(txt)) { tableRows.done = true; lines.push(txt); return; }
+        const heads = rows[hi].items; const starts = heads.map(h => h.x - 4);
+        const cells = heads.map(() => '');
+        r.items.forEach(it => { let c = 0; starts.forEach((s, k) => { if (it.x >= s) c = k; }); cells[c] = (cells[c] ? cells[c] + ' ' : '') + it.s.trim(); });
+        if (cells.slice(1).every(c => !c) && tableRows.length) tableRows[tableRows.length - 1][0] += ' ' + cells[0];
+        else tableRows.push(cells);
+        return;
+      }
+      lines.push(txt);
+    });
+    if (tableRows.length) tables.push([['Description', 'Quantity', 'Rate', 'Amount']].concat(tableRows));
+  }
+  return { lines, tables };
+}
+function parseDateText(s) {
+  if (!s) return '';
+  s = s.replace(/(\d+)(st|nd|rd|th)\b/gi, '$1').replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+  const mi = m => { const i = MONTHS.findIndex(x => x.toLowerCase() === m.slice(0, 3).toLowerCase()); return i >= 0 ? i + 1 : 0; };
+  const iso = (y, m, d) => { y = Number(y); if (y < 100) y += 2000; if (!m || d < 1 || d > 31 || m > 12) return ''; return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0'); };
+  let m;
+  if ((m = s.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/))) return iso(m[1], +m[2], +m[3]);
+  if ((m = s.match(/\b(\d{1,2})\s+([A-Za-z]{3,})\.?\s+(\d{2,4})\b/))) return iso(m[3], mi(m[2]), +m[1]);
+  if ((m = s.match(/\b([A-Za-z]{3,})\.?\s+(\d{1,2})\s+(\d{2,4})\b/))) return iso(m[3], mi(m[1]), +m[2]);
+  if ((m = s.match(/\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/))) return iso(m[3], +m[2], +m[1]); // Australian day/month/year
+  return '';
+}
+function parseInvoice(doc, fileName) {
+  const text = doc.lines.map(l => l.replace(/ /g, ' ')).join('\n');
+  const grab = re => { const m = text.match(re); return m ? m[1].trim() : ''; };
+  const amt = re => { const v = grab(re); return v === '' ? null : num(v); };
+  const notes = [];
+  let no = parseInt(grab(/Invoice\s*(?:Number|No\.?|#)[ \t]*:?[ \t]*#?[ \t]*(\d+)/i), 10);
+  const fileNo = parseInt(((fileName.match(/invoice[^0-9]{0,6}(\d+)/i) || [])[1]) || '', 10);
+  if (!no && fileNo) { no = fileNo; notes.push('Number taken from the file name'); }
+  else if (no && fileNo && no !== fileNo) notes.push('File name says ' + fileNo + ', the invoice says ' + no);
+  let date = parseDateText(grab(/Invoice\s*Date[ \t]*:?[ \t]*([^\n]+)/i));
+  if (!date) { date = parseDateText(fileName.replace(/\.[a-z]+$/i, '').replace(/^.*?-\s*/, '')); if (date) notes.push('Date taken from the file name'); }
+  const billedTo = grab(/Billed\s*To[ \t]*:?[ \t]*([^\n]+)/i) || 'Social Keepr';
+  const services = grab(/Description\s*of\s*Services[ \t]*:?[ \t]*([^\n]+)/i) || 'Photo Booth Event Services';
+  const hm = text.match(/Hours\s*worked[ \t]*:?[ \t]*([\d.]+)[ \t]*(?:hours?|hrs?)?[ \t]*(?:\(([^)\n]*)\))?/i);
+  const rows = [];
+  const tbl = doc.tables.find(t => t.length && /desc/i.test((t[0] || []).join(' '))) || doc.tables[0];
+  if (tbl) tbl.forEach((cells, i) => {
+    if (i === 0 && /desc/i.test(cells.join(' '))) return;
+    const [desc = '', q = '', r = '', a = ''] = cells;
+    if (!desc && !q && !r && !a) return;
+    const qm = q.match(/([\d.,]+)\s*([A-Za-z]*)/);
+    const row = { desc: desc.trim(), qty: qm ? qm[1].replace(/,/g, '') : '', unit: qm ? qm[2] : q.trim(), rate: r ? String(num(r)) : '' };
+    if (a.trim() !== '') { const stated = round2(num(a)); if (Math.abs(stated - round2(num(row.qty) * num(row.rate))) > 0.009) row.fixedAmount = stated; }
+    rows.push(row);
+  });
+  const sub = amt(/(?:^|\n)[ \t]*Total(?![ \t]*amount)[ \t]*:?[ \t]*\$?[ \t]*([\d,]+(?:\.\d+)?)/i);
+  const gstAmt = amt(/(?:^|\n)[ \t]*GST[ \t]*:?[ \t]*\$?[ \t]*([\d,]+(?:\.\d+)?)/i);
+  const payable = amt(/TOTAL[ \t]*AMOUNT[ \t]*PAYABLE[ \t]*:?[ \t]*\$?[ \t]*([\d,]+(?:\.\d+)?)/i);
+  const inv = { no: no || '', date, billedTo, services, hours: hm ? hm[1] : '', hoursDays: hm && hm[2] ? hm[2].replace(/\s+/g, ' ').trim() : '', gst: !!(gstAmt && gstAmt > 0), paid: false, rows,
+    note: 'Imported from ' + fileName + '.', importedFrom: fileName };
+  const calc = round2(rows.reduce((s, r) => s + amountOf(r), 0));
+  const stated = sub != null ? sub : (payable != null ? round2(payable - (gstAmt || 0)) : null);
+  if (stated != null && Math.abs(stated - calc) > 0.009) { inv.totalOverride = stated; notes.push('Its typed total (' + aud(stated) + ') does not match its rows (' + aud(calc) + '); the typed total is used'); }
+  if (!rows.length) notes.push('No line items found');
+  if (stated == null) notes.push('No total found; the rows are added up instead');
+  const level = !no || !date ? 'bad' : (notes.some(n => /match|No line|No total/.test(n)) ? 'check' : 'ok');
+  return { inv, notes, level };
+}
+
+let imp = { items: [], paid: true, busy: false, msg: '' };
+function renderImport() {
+  const v = $('view');
+  const ready = imp.items.filter(i => i.include && i.inv);
+  v.innerHTML = '<div class="pagehead"><div><h1>Import old invoices</h1><p>Add invoices you made in Word or saved as PDF, so they count on the dashboard.</p></div></div>' +
+    '<section class="card"><label class="drop" id="drop" for="impFiles"><b>Choose invoice files</b><span>or drag them here. Word (.docx) and PDF files work. You can pick lots at once.</span></label><input id="impFiles" type="file" multiple accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>' +
+    '<p class="hint">Old .doc files from very old Word versions cannot be read. Open them in Word and use Save As → .docx first.</p></section>' +
+    (imp.busy ? '<p class="notice">' + esc(imp.msg || 'Reading files…') + '</p>' : '') +
+    (imp.items.length ? '<section class="card"><h2>Check before adding</h2><div class="scrollx"><table class="imptable"><thead><tr><th>Add</th><th>File</th><th>Invoice no.</th><th>Date</th><th class="r">Amount</th><th>Notes</th></tr></thead><tbody>' +
+      imp.items.map((it, k) => it.inv ? '<tr class="lv-' + it.level + '"><td><input type="checkbox" data-k="' + k + '" class="impInc"' + (it.include ? ' checked' : '') + ' aria-label="Add this invoice"></td><td class="fn">' + esc(it.file) + '</td>' +
+        '<td><input type="number" min="1" class="impNo" data-k="' + k + '" value="' + esc(it.inv.no) + '" aria-label="Invoice number"></td><td><input type="date" class="impDate" data-k="' + k + '" value="' + esc(it.inv.date) + '" aria-label="Invoice date"></td>' +
+        '<td class="r num">' + esc(money(totalsOf(it.inv).all)) + '</td><td class="nt">' + (it.notes.length ? esc(it.notes.join('. ')) + '.' : 'Looks good.') + '</td></tr>'
+        : '<tr class="lv-bad"><td></td><td class="fn">' + esc(it.file) + '</td><td colspan="4" class="nt">Could not read this file: ' + esc(it.error) + '</td></tr>').join('') +
+      '</tbody></table></div>' +
+      '<label class="check" for="impPaid" style="margin-top:14px"><input id="impPaid" type="checkbox"' + (imp.paid ? ' checked' : '') + '> These invoices have already been paid</label>' +
+      (imp.busy ? '' : '<div class="actions" style="margin-top:14px"><button class="primary" id="impGo" type="button"' + (ready.length ? '' : ' disabled') + '>Add ' + ready.length + ' invoice' + (ready.length === 1 ? '' : 's') + '</button><button class="secondary" id="impClear" type="button">Clear list</button></div>') +
+      '<p class="status" id="status" role="status"></p></section>' : '');
+  const input = $('impFiles'); input.addEventListener('change', e => { const fs = Array.from(e.target.files || []); e.target.value = ''; if (fs.length) importFiles(fs); });
+  const drop = $('drop');
+  ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => { const fs = Array.from(e.dataTransfer.files || []); if (fs.length) importFiles(fs); });
+  document.querySelectorAll('.impInc').forEach(c => c.addEventListener('change', () => { imp.items[+c.dataset.k].include = c.checked; renderImport(); }));
+  document.querySelectorAll('.impNo').forEach(c => c.addEventListener('change', () => { imp.items[+c.dataset.k].inv.no = parseInt(c.value, 10) || ''; recheck(); renderImport(); }));
+  document.querySelectorAll('.impDate').forEach(c => c.addEventListener('change', () => { imp.items[+c.dataset.k].inv.date = c.value; recheck(); renderImport(); }));
+  if ($('impPaid')) $('impPaid').addEventListener('change', e => { imp.paid = e.target.checked; });
+  if ($('impClear')) $('impClear').addEventListener('click', () => { imp.items = []; renderImport(); });
+  if ($('impGo')) $('impGo').addEventListener('click', commitImport);
+}
+function recheck() {
+  const seen = new Set();
+  imp.items.forEach(it => { if (!it.inv) return;
+    it.notes = it.notes.filter(n => !/^Already saved|^Same number as/.test(n));
+    const n = Number(it.inv.no);
+    if (!n || !it.inv.date) { it.level = 'bad'; it.include = false; return; }
+    if (it.level === 'bad') { it.level = 'check'; it.include = true; }
+    else if (seen.has(n)) { it.notes.unshift('Same number as another file in this list, so it is left out'); it.include = false; }
+    else if (byNo(n)) { it.notes.unshift('Already saved as invoice ' + n + '. Tick to replace it'); if (it.autoInclude !== false) it.include = false; }
+    seen.add(n);
+  });
+}
+async function importFiles(files) {
+  imp.busy = true; renderImport();
+  for (let k = 0; k < files.length; k++) {
+    const f = files[k]; imp.msg = 'Reading ' + (k + 1) + ' of ' + files.length + ': ' + f.name; renderImport();
+    try {
+      let doc;
+      if (/\.docx$/i.test(f.name)) doc = await readDocx(f);
+      else if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') doc = await readPdf(f);
+      else throw new Error('only .docx and .pdf files can be read');
+      const r = parseInvoice(doc, f.name);
+      imp.items.push({ file: f.name, inv: r.inv, notes: r.notes, level: r.level, include: r.level !== 'bad' });
+    } catch (e) {
+      const m = String(e && e.message || e);
+      imp.items.push({ file: f.name, error: /^load|^missing/.test(m) ? 'the file reader did not load. Check your internet connection and try again' : /Word|docx|zip|end of central/i.test(m) ? 'it is not a readable Word file' : m });
+    }
+  }
+  imp.items.sort((a, b) => (Number(a.inv && a.inv.no) || 1e9) - (Number(b.inv && b.inv.no) || 1e9));
+  imp.busy = false; recheck(); renderImport();
+}
+async function commitImport() {
+  const list = imp.items.filter(i => i.include && i.inv);
+  const btn = $('impGo'); if (btn) btn.disabled = true;
+  let done = 0;
+  for (const it of list) {
+    const rec = clone(it.inv); rec.paid = imp.paid; if (imp.paid) rec.paidAt = rec.date + 'T00:00:00.000Z';
+    const prev = byNo(rec.no); if (prev && prev.createdAt) rec.createdAt = prev.createdAt;
+    try { await saveInvoice(rec); done++; say('Added ' + done + ' of ' + list.length + '…'); }
+    catch (e) { say('Stopped after ' + done + ' invoices: ' + (e && e.code === 'quota_exceeded' ? 'storage is full.' : 'could not save. Try again.'), 'bad'); return; }
+  }
+  imp.items = imp.items.filter(i => !(i.include && i.inv));
+  flashDash = 'Added ' + done + ' old invoice' + (done === 1 ? '' : 's') + '. The dashboard now includes them.';
+  go({ name: 'dash' });
+}
+let flashDash = null;
 
 /* ---------- backup and restore ---------- */
 $('bExport').addEventListener('click', async () => {
