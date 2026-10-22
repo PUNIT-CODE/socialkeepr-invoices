@@ -1,20 +1,40 @@
 rules_version = '2';
 // SocialKeepr Invoices: each person can only read and write their own data under users/<their id>.
-// Nobody can make themselves a manager: the role field can only be "staff" when they create their record,
-// and only you (from the Firebase console) can change it later.
+// Every write is checked: only known fields, sensible sizes, and nobody can change their own role.
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function isOwner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function str(v, n) { return v is string && v.size() <= n; }
+    function optStr(d, k, n) { return !(k in d) || str(d[k], n); }
 
     match /users/{uid} {
+      function validMember(d) {
+        return d.keys().hasOnly(['email', 'name', 'photo', 'role', 'createdAt', 'updatedAt'])
+          && optStr(d, 'email', 200) && optStr(d, 'name', 60) && optStr(d, 'photo', 300000)
+          && optStr(d, 'createdAt', 40) && optStr(d, 'updatedAt', 40);
+      }
       allow read: if isOwner(uid);
-      allow create: if isOwner(uid) && request.resource.data.role == 'staff';
-      allow update: if isOwner(uid) && request.resource.data.role == resource.data.role;
+      allow create: if isOwner(uid) && request.resource.data.role == 'staff' && validMember(request.resource.data);
+      allow update: if isOwner(uid) && request.resource.data.role == resource.data.role && validMember(request.resource.data);
       allow delete: if false;
 
-      match /{document=**} {
-        allow read, write: if isOwner(uid);
+      match /invoices/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && id.matches('inv-[0-9]{1,6}')
+          && request.resource.data.no is int && request.resource.data.no >= 1 && request.resource.data.no <= 999999
+          && request.resource.data.rows is list && request.resource.data.rows.size() <= 50
+          && request.resource.data.keys().hasOnly(['no', 'date', 'billedTo', 'services', 'hours', 'hoursDays', 'gst', 'paid', 'paidAt', 'rows', 'totalOverride', 'note', 'importedFrom', 'createdAt', 'updatedAt', 'weekStart'])
+          && optStr(request.resource.data, 'billedTo', 120) && optStr(request.resource.data, 'services', 120) && optStr(request.resource.data, 'note', 300);
+      }
+      match /receipts/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && id.matches('r[a-z0-9]{4,24}')
+          && request.resource.data.keys().hasOnly(['id', 'img', 'w', 'h', 'amount', 'date', 'merchant', 'cat', 'createdAt'])
+          && str(request.resource.data.img, 1500000) && optStr(request.resource.data, 'merchant', 80);
+      }
+      match /private/{docId} {
+        allow read: if isOwner(uid);
+        allow write: if isOwner(uid) && docId in ['profile', 'settings'];
       }
     }
   }
