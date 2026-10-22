@@ -172,8 +172,17 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 .acct span { display: flex; flex-direction: column; min-width: 0; } .acct b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .acct small { font-size: 12px; color: var(--muted); }
 .acct[aria-current="page"] { border-color: var(--accent); }
 .authcard { max-width: 460px; display: flex; flex-direction: column; gap: 14px; }
-.gbtn { width: 100%; font-weight: 600; }
+.gbtn { width: 100%; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.glogo { flex: none; }
 .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; } .or::before, .or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.avatar { border-radius: 50%; object-fit: cover; flex: none; display: inline-flex; align-items: center; justify-content: center; }
+.avatar.initials { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.acct .dot { margin-left: auto; flex: none; }
+.pfrow { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; } .pfpic { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.weekwarn { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+.dialog { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 60; }
+.dialog .box { background: var(--panel); color: var(--fg); border-radius: 14px; padding: 22px; max-width: 440px; width: 100%; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+.dialog h2 { font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--fg); margin: 0; } .dialog p { margin: 0; font-size: 14px; color: var(--muted); }
 .syncline { display: flex; gap: 8px; align-items: center; margin: 0; }
 .sharepanel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); display: flex; flex-direction: column; gap: 10px; }
 .sharepanel p { margin: 0; font-size: 14px; }
@@ -219,6 +228,9 @@ button.primary { font-weight: 600; background: var(--accent); color: var(--accen
 button.primary:hover { filter: brightness(1.08); }
 button.secondary { background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 16px; cursor: pointer; }
 button.secondary:hover { border-color: var(--accent); }
+label.secondary { display: inline-block; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 16px; cursor: pointer; font-size: 15px; }
+label.secondary:hover { border-color: var(--accent); }
+label.secondary:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
 button.danger { background: none; color: var(--warn); border: 1px solid var(--line); border-radius: 10px; padding: 11px 16px; cursor: pointer; }
 button.danger:hover { border-color: var(--warn); }
 .status { font-size: 13px; color: var(--muted); min-height: 1.2em; margin: 10px 0 0; }
@@ -339,7 +351,22 @@ $('navDash').addEventListener('click', () => go({ name: 'dash' }));
 $('navImport').addEventListener('click', () => go({ name: 'import' }));
 $('navRun').addEventListener('click', () => go({ name: 'runsheet' }));
 $('acctBtn').addEventListener('click', () => go({ name: 'account' }));
-$('navNew').addEventListener('click', () => { draft = freshDraft(); store.set('draft', draft); go({ name: 'edit' }); });
+const weekOfInv = inv => inv.weekStart || invoiceWeekStart(inv.date);
+function invoiceForWeek(ws, exceptNo) { return sorted().find(i => weekOfInv(i) === ws && Number(i.no) !== Number(exceptNo)); }
+function startNewInvoice() { draft = freshDraft(); store.set('draft', draft); go({ name: 'edit' }); }
+$('navNew').addEventListener('click', () => {
+  const ws = invoiceWeekStart(todayISO()); const ex = invoiceForWeek(ws);
+  if (!ex) { startNewInvoice(); return; }
+  const d = document.createElement('div'); d.className = 'dialog'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+  d.innerHTML = '<div class="box"><h2>This week\'s invoice is already made</h2><p>Invoice ' + esc(ex.no) + ' covers ' + esc(weekLabel(ws)) + ' (dated ' + esc(fmtDate(ex.date)) + ', ' + esc(money(totalsOf(ex).all)) + ').</p><p>You can still make another one if you need to.</p>' +
+    '<div class="actions"><button class="primary" type="button" id="dlgOpen">Open invoice ' + esc(ex.no) + '</button><button class="secondary" type="button" id="dlgNew">Make a new invoice anyway</button></div></div>';
+  document.body.appendChild(d);
+  const close = () => d.remove();
+  d.addEventListener('click', e => { if (e.target === d) close(); });
+  d.querySelector('#dlgOpen').addEventListener('click', () => { close(); go({ name: 'inv', no: Number(ex.no) }); });
+  d.querySelector('#dlgNew').addEventListener('click', () => { close(); startNewInvoice(); });
+  d.querySelector('#dlgOpen').focus();
+});
 $('listToggle').addEventListener('click', () => { const s = $('side'); const open = s.classList.toggle('collapsed') === false; $('listToggle').setAttribute('aria-expanded', String(open)); $('listToggle').textContent = open ? 'Hide' : 'Show'; });
 
 // The most recent row matching a test, from saved invoices (newest first).
@@ -380,7 +407,7 @@ function render() { renderSide(); const v = $('view');
 function renderSide() {
   const ab = $('acctBtn');
   if (!FIREBASE_CONFIG || window.claude) ab.hidden = true;
-  else if (cloud.user) { ab.hidden = false; ab.innerHTML = '<i class="dot ' + (cloud.status === 'synced' ? 'paid' : 'unpaid') + '"></i><span><b>' + esc(cloud.user.email || cloud.user.displayName || 'Signed in') + '</b><small>' + esc(cloud.status === 'synced' ? 'Synced' : cloud.status === 'offline' ? 'Offline, will sync later' : cloud.status === 'error' ? 'Not synced' : 'Syncing…') + '</small></span>'; }
+  else if (cloud.user) { ab.hidden = false; ab.innerHTML = avatarHTML(36) + '<span><b>' + esc((cloud.member && cloud.member.name) || cloud.user.email || 'Signed in') + '</b><small>' + esc(cloud.status === 'synced' ? 'Synced' : cloud.status === 'offline' ? 'Offline, will sync later' : cloud.status === 'error' ? 'Not synced' : 'Syncing…') + '</small></span><i class="dot ' + (cloud.status === 'synced' ? 'paid' : 'unpaid') + '"></i>'; }
   else { ab.hidden = false; ab.innerHTML = '<span><b>Sign in to sync</b><small>See your invoices on your phone and computer</small></span>'; }
   ab.setAttribute('aria-current', route.name === 'account' ? 'page' : 'false');
   $('navDash').setAttribute('aria-current', route.name === 'dash' ? 'page' : 'false');
@@ -586,11 +613,12 @@ function renderEditor() {
         '<label class="f">Total hours<input id="fHours" type="number" min="0" step="0.25" inputmode="decimal" placeholder="e.g. 8"></label>' +
         '<label class="f">Which days<input id="fDays" type="text" placeholder="e.g. 16, 17 & 18 Oct 2026"></label></div>' +
         '<p class="hint">Leave total hours empty to hide this line on the invoice. Rows with no quantity are left off the PDF.</p></section>' +
+      '<div id="weekWarn"></div>' +
       '<section class="card"><h2>From the run sheet</h2><div class="sheetbox"><p>Week: <b id="wkLabel"></b></p><div class="actions"><input id="fWeek" type="date" aria-label="Any day in the week" style="width:auto"><button class="secondary" type="button" id="bFill">Fill in jobs from the run sheet</button></div></div><p class="status" id="fillMsg" role="status"></p></section>' +
       '<section class="card"><h2>What you are charging for</h2>' +
         '<div class="tablebox"><table class="items" aria-label="Line items"><thead><tr><th style="width:34%">Description</th><th style="width:14%">Quantity</th><th style="width:14%">Unit</th><th style="width:16%">Rate ($)</th><th style="width:16%;text-align:right">Amount</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>' +
         '<div class="addrow"><span class="addlabel">Add if needed:</span>' + extraItems().map((x, k) => '<button class="chip" type="button" data-add="x' + k + '">+ ' + esc(x.desc) + '</button>').join('') + '<button class="chip" type="button" data-add="fuel">+ More fuel</button><button class="chip" type="button" data-add="custom">+ Something else</button></div>' +
-        '<div class="rcptbar"><label class="secondary filebtn" for="rcptFiles">Add receipt screenshots</label><input id="rcptFiles" type="file" accept="image/*" multiple hidden><span class="hint">Pick your CommBank payment screenshots. The amounts are read on this device and the screenshots are added to the PDF as evidence.</span></div><div id="rcptBox"></div>' +
+        '<div class="rcptbar"><label class="secondary filebtn" for="rcptFiles">Add payment receipts</label><input id="rcptFiles" type="file" accept="image/*" multiple hidden><span class="hint">Pick photos or screenshots of your payment receipts (fuel, albums, Uber and so on). The amounts are read on this device and the receipts are added to the PDF as evidence.</span></div><div id="rcptBox"></div>' +
         '<div id="overrideBox"></div>' +
         '<div class="totals"><span>Total</span><span class="v" id="tSub"></span>' +
         '<label class="check" for="fGst"><input id="fGst" type="checkbox"> Add GST (10%)</label><span class="v" id="tGst"></span>' +
@@ -623,7 +651,10 @@ function renderEditor() {
   $('bSaveDl').addEventListener('click', () => trySave(true));
   if ($('bCancel')) $('bCancel').addEventListener('click', () => { const no = draft.editing; draft = null; store.del('draft'); go({ name: 'inv', no }); });
   const wk = () => draft.weekStart || invoiceWeekStart(draft.date);
-  const showWk = () => { $('wkLabel').textContent = weekLabel(wk()); $('fWeek').value = wk(); };
+  const showWk = () => { $('wkLabel').textContent = weekLabel(wk()); $('fWeek').value = wk();
+    const ex = invoiceForWeek(wk(), draft.editing); const w = $('weekWarn');
+    w.innerHTML = ex ? '<p class="notice warn weekwarn"><span>Reminder: invoice ' + esc(ex.no) + ' was already made for ' + esc(weekLabel(wk())) + ' (' + esc(money(totalsOf(ex).all)) + '). You can still make this one.</span><button class="secondary" type="button" id="wwOpen">Open invoice ' + esc(ex.no) + '</button></p>' : '';
+    if (ex) $('wwOpen').addEventListener('click', () => go({ name: 'inv', no: Number(ex.no) })); };
   showWk();
   $('fWeek').addEventListener('change', e => { if (e.target.value) { draft.weekStart = mondayOf(e.target.value); showWk(); edited(); } });
   $('fDate').addEventListener('change', () => { if (!draft.weekLocked) { delete draft.weekStart; showWk(); } });
@@ -674,7 +705,8 @@ async function trySave(alsoDownload, replaceOk) {
     $('cNo').addEventListener('click', () => { $('confirmBox').innerHTML = ''; draft.no = nextNo(); $('fNo').value = draft.no; edited(); trySave(alsoDownload); });
     return;
   }
-  const rec = clone(draft); const oldNo = rec.editing; delete rec.editing;
+  const rec = clone(draft); const oldNo = rec.editing; delete rec.editing; delete rec.weekLocked;
+  if (!rec.weekStart) rec.weekStart = invoiceWeekStart(rec.date);
   const prev = oldNo != null ? byNo(oldNo) : null;
   if (prev) { rec.paid = !!prev.paid; rec.createdAt = prev.createdAt; }
   try {
@@ -1141,7 +1173,7 @@ $('bImport').addEventListener('change', async e => {
   render();
 });
 
-/* ---------- receipts: bank screenshots read on this device and attached as evidence ---------- */
+/* ---------- payment receipts: photos or screenshots read on this device and attached as evidence ---------- */
 const idb = {
   open() { return this._p || (this._p = new Promise((res, rej) => { const r = indexedDB.open('skinv', 1); r.onupgradeneeded = () => r.result.createObjectStore('receipts', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); })); },
   async run(mode, fn) { const d = await this.open(); return new Promise((res, rej) => { const tx = d.transaction('receipts', mode); const st = tx.objectStore('receipts'); const q = fn(st); tx.oncomplete = () => res(q && q.result); tx.onerror = () => rej(tx.error); }); },
@@ -1306,6 +1338,7 @@ const cloud = {
       if (first) { first = false; this.migrate(); }
       if (route.name === 'edit') renderSide(); else render();
     }, () => { this.status = 'error'; renderSide(); }));
+    this.unsub.push(F.onSnapshot(window.SKFB.doc(this.fs, 'users', u.uid), s => { this.member = s.data() || {}; renderSide(); if (route.name === 'account' && !$('pfName')) render(); }));
     this.unsub.push(F.onSnapshot(this.ref('private', 'profile'), s => { const d = s.data(); if (d) { profile.name = d.name || ''; profile.tfn = d.tfn || ''; if (route.name !== 'edit') render(); } }));
     this.unsub.push(F.onSnapshot(this.ref('private', 'settings'), s => { const d = s.data(); if (d) { settings = Object.assign({ merchants: {} }, d); if (d.sheetLink != null) sheetCfg.link = d.sheetLink; } }));
   },
@@ -1327,6 +1360,7 @@ const cloud = {
   async getReceipt(id) { const s = await window.SKFB.getDoc(window.SKFB.doc(this.col('receipts'), id)); return s.exists() ? s.data() : null; },
   delReceipt(id) { return window.SKFB.deleteDoc(window.SKFB.doc(this.col('receipts'), id)); },
   saveProfile(p) { return window.SKFB.setDoc(this.ref('private', 'profile'), { name: p.name || '', tfn: p.tfn || '' }); },
+  saveMember(d) { return window.SKFB.updateDoc(window.SKFB.doc(this.fs, 'users', this.user.uid), Object.assign({ updatedAt: new Date().toISOString() }, d)); },
   saveSettings() { return window.SKFB.setDoc(this.ref('private', 'settings'), { merchants: settings.merchants || {}, sheetLink: sheetCfg.link || '' }).catch(() => {}); },
   async signOutAll() { const F = window.SKFB; await F.signOut(this.auth); try { await F.terminate(this.fs); await F.clearIndexedDbPersistence(this.fs); } catch (e) {} location.reload(); }
 };
@@ -1347,15 +1381,25 @@ function renderAccount() {
   if (!cloud.ready) { v.innerHTML = '<div class="pagehead"><div><h1>Sign in and sync</h1><p>' + (cloud.status === 'unavailable' ? 'Could not load sign-in. Check your internet connection and reload.' : 'Loading…') + '</p></div></div>'; return; }
   if (cloud.user) {
     const u = cloud.user;
+    const mb = cloud.member || {};
     v.innerHTML = '<div class="pagehead"><div><h1>Your account</h1><p>Signed in as ' + esc(u.email || u.displayName || 'you') + '</p></div></div>' +
+      '<section class="card"><h2>Your profile</h2><div class="pfrow"><div class="pfpic">' + avatarHTML(84) + '<div class="actions"><label class="secondary filebtn" for="pfFile">' + (mb.photo ? 'Change photo' : 'Add photo') + '</label><input id="pfFile" type="file" accept="image/*" hidden>' + (mb.photo ? '<button class="linkish" type="button" id="pfDel">Remove</button>' : '') + '</div></div>' +
+      '<div class="stack" style="flex:1 1 240px"><label class="f">Username<input id="pfName" type="text" maxlength="40" value="' + esc(mb.name || '') + '" placeholder="e.g. Punit"></label><div class="actions"><button class="primary" type="button" id="pfSave">Save</button></div>' +
+      '<p class="hint" style="margin:0">Shown in the app, and later to your manager or team. The name printed on your invoices is set separately under "Your details" in each invoice.</p></div></div><p class="status" id="pfMsg" role="status"></p></section>' +
       '<section class="card"><h2>Sync</h2><p class="syncline"><i class="dot ' + (cloud.status === 'synced' ? 'paid' : 'unpaid') + '"></i>' + esc(syncText()) + '</p>' +
       '<p class="hint">Your invoices, receipts, details and run sheet link are saved to your account and show up on every phone or computer you sign in on. You can keep working with no internet; changes upload when you are back online.</p></section>' +
       '<section class="card"><h2>Sign out</h2><p class="hint" style="margin-top:0">Signing out removes your invoices from this device. They stay safe in your account.</p><div class="actions" style="margin-top:10px"><button class="secondary" type="button" id="acOut">Sign out</button></div></section>';
     $('acOut').addEventListener('click', () => { $('acOut').disabled = true; cloud.signOutAll(); });
+    const pmsg = (t, k) => { $('pfMsg').className = 'status ' + (k || ''); $('pfMsg').textContent = t; };
+    $('pfSave').addEventListener('click', async () => { const n = $('pfName').value.trim(); if (!n) { pmsg('Type a username first.', 'bad'); return; }
+      try { await cloud.saveMember({ name: n }); pmsg('Saved.', 'ok'); } catch (e) { pmsg('Could not save. Check your connection and try again.', 'bad'); } });
+    $('pfFile').addEventListener('change', async e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+      try { pmsg('Saving photo…'); const pic = await squarePhoto(f, 256); await cloud.saveMember({ photo: pic }); pmsg('Photo saved.', 'ok'); render(); } catch (err) { pmsg('That photo could not be used. Try a JPG or PNG.', 'bad'); } });
+    if ($('pfDel')) $('pfDel').addEventListener('click', async () => { try { await cloud.saveMember({ photo: '' }); render(); } catch (e) {} });
     return;
   }
   v.innerHTML = '<div class="pagehead"><div><h1>Sign in to sync</h1><p>Use the same account on your phone and computer to see the same invoices on both.</p></div></div>' +
-    '<section class="card authcard"><button class="secondary gbtn" type="button" id="acGoogle">Continue with Google</button><div class="or"><span>or use email</span></div>' +
+    '<section class="card authcard"><button class="secondary gbtn" type="button" id="acGoogle"><svg class="glogo" viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><span>Continue with Google</span></button><div class="or"><span>or use email</span></div>' +
     '<form id="acForm" class="stack" novalidate><label class="f">Email<input id="acEmail" type="email" autocomplete="username" required></label><label class="f">Password<input id="acPw" type="password" autocomplete="current-password" required minlength="6"></label>' +
     '<div class="actions"><button class="primary" type="submit" id="acIn">Sign in</button><button class="secondary" type="button" id="acNew">Create account</button><button class="linkish" type="button" id="acReset">Forgot password?</button></div></form>' +
     '<p class="status" id="status" role="status"></p>' +
@@ -1366,6 +1410,18 @@ function renderAccount() {
   $('acForm').addEventListener('submit', e => { e.preventDefault(); run(() => F.signInWithEmailAndPassword(cloud.auth, $('acEmail').value.trim(), $('acPw').value)); });
   $('acNew').addEventListener('click', () => run(async () => { const c = await F.createUserWithEmailAndPassword(cloud.auth, $('acEmail').value.trim(), $('acPw').value); if (profile.name) await F.updateProfile(c.user, { displayName: profile.name }); }));
   $('acReset').addEventListener('click', () => { const em = $('acEmail').value.trim(); if (!em) { say('Type your email first, then press "Forgot password?".', 'bad'); return; } run(async () => { await F.sendPasswordResetEmail(cloud.auth, em); say('Check your email for a link to set a new password.', 'ok'); }); });
+}
+function avatarHTML(size) {
+  const mb = (cloud && cloud.member) || {}; const label = (mb.name || (cloud.user && cloud.user.email) || '?').trim();
+  if (mb.photo) return '<img class="avatar" src="' + esc(mb.photo) + '" alt="" width="' + size + '" height="' + size + '" style="width:' + size + 'px;height:' + size + 'px">';
+  return '<span class="avatar initials" style="width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * 0.4) + 'px" aria-hidden="true">' + esc(label.charAt(0).toUpperCase()) + '</span>';
+}
+// Centre-crop a photo to a small square (kept small so it syncs quickly).
+function squarePhoto(file, side) {
+  return new Promise((res, rej) => { const url = URL.createObjectURL(file); const im = new Image();
+    im.onload = () => { const m = Math.min(im.width, im.height); const c = document.createElement('canvas'); c.width = c.height = side; const g = c.getContext('2d');
+      g.drawImage(im, (im.width - m) / 2, (im.height - m) / 2, m, m, 0, 0, side, side); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.82)); };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('bad image')); }; im.src = url; });
 }
 function syncText() { return ({ synced: 'All changes saved to your account.', syncing: 'Saving changes…', offline: 'Offline. Changes will upload when you are back online.', error: 'Could not reach your account. Changes are kept on this device for now.' })[cloud.status] || ''; }
 
