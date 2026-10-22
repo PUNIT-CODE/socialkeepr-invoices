@@ -156,6 +156,15 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 .job dl div { display: contents; } .job dt { color: var(--muted); } .job dd { margin: 0; overflow-wrap: anywhere; }
 .pill.neutral { background: var(--field); color: var(--muted); border: 1px solid var(--line); } .pill.att { background: var(--accent-soft); color: var(--accent); }
 .filebtn { display: inline-block; cursor: pointer; }
+.sharepanel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); display: flex; flex-direction: column; gap: 10px; }
+.sharepanel p { margin: 0; font-size: 14px; }
+.pwrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; } .pwrow label { flex: 1 1 200px; }
+.linkrow { display: flex; flex-wrap: wrap; gap: 8px; } .linkrow input { flex: 1 1 240px; font-family: var(--font-num); font-size: 12px; }
+.shareview { min-height: 100vh; padding-block: 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.lockcard { max-width: 420px; margin: 8vh auto 0; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+.lockcard h1 { margin: 0; font-size: 22px; } .lockcard p { margin: 0; color: var(--muted); font-size: 14px; }
+.lockLogo { width: 64px; height: 64px; border-radius: 12px; }
+.sharedoc { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 .sheetbox { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
 .sheetbox p { margin: 0; font-size: 14px; }
 
@@ -656,7 +665,8 @@ function renderInvoice(no) {
       '<button class="secondary" type="button" id="vPaid">' + (inv.paid ? 'Mark as not paid' : 'Mark as paid') + '</button>' +
       '<button class="secondary" type="button" id="vEdit">Edit</button>' +
       '<button class="secondary" type="button" id="vCopy">Copy into a new invoice</button>' +
-      '<button class="danger" type="button" id="vDel">Delete</button></div><div id="confirmBox"></div><p class="status" id="status" role="status"></p></section>' +
+      '<button class="secondary" type="button" id="vShare">Share link</button>' +
+      '<button class="danger" type="button" id="vDel">Delete</button></div><div id="shareBox"></div><div id="confirmBox"></div><p class="status" id="status" role="status"></p></section>' +
     '<section class="card"><h2>Summary</h2><dl class="kv">' +
       '<dt>Total</dt><dd>' + esc(aud(t.sub)) + '</dd>' + (inv.gst ? '<dt>GST</dt><dd>' + esc(aud(t.gst)) + '</dd>' : '') +
       '<dt>Amount payable</dt><dd><b>' + esc(aud(t.all)) + '</b></dd>' +
@@ -672,6 +682,7 @@ function renderInvoice(no) {
   $('vCopy').addEventListener('click', () => { draft = clone(inv); delete draft.totalOverride; delete draft.note; delete draft.paidAt; delete draft.createdAt; delete draft.updatedAt;
     draft.rows.forEach(r => delete r.fixedAmount); delete draft.importedFrom;
     draft.no = nextNo(); draft.date = todayISO(); draft.paid = false; draft.editing = null; store.set('draft', draft); go({ name: 'edit' }); });
+  wireSharePanel(inv);
   $('vDel').addEventListener('click', () => {
     $('confirmBox').innerHTML = '<div class="confirm">Delete invoice ' + esc(inv.no) + ' for good?<button class="danger" type="button" id="cYes">Delete</button><button class="secondary" type="button" id="cNo">Keep it</button></div>';
     $('cNo').addEventListener('click', () => { $('confirmBox').innerHTML = ''; });
@@ -1093,11 +1104,89 @@ $('bImport').addEventListener('change', async e => {
   render();
 });
 
+/* ---------- password-protected share links ----------
+   The invoice is encrypted in the browser (AES-GCM, key from the password with PBKDF2) and the result
+   is placed after the # in the link. The part after # is never sent to any server; only someone with
+   the password can open it. */
+const SHARE_BASE = 'https://punit-code.github.io/socialkeepr-invoices/';
+const b64u = { enc: u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); },
+  dec: s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; } };
+async function streamThrough(u8, stream) { const out = new Response(new Blob([u8]).stream().pipeThrough(stream)); return new Uint8Array(await out.arrayBuffer()); }
+async function pwKey(pw, salt) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 310000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function makeShareLink(inv, pw) {
+  const payload = { v: 1, inv: clone(inv), name: profile.name || '', tfn: profile.tfn || '', made: new Date().toISOString() };
+  delete payload.inv.note; delete payload.inv.importedFrom;
+  let data = new TextEncoder().encode(JSON.stringify(payload)); let flag = 2;
+  if (typeof CompressionStream === 'function') { try { data = await streamThrough(data, new CompressionStream('deflate-raw')); flag = 1; } catch (e) {} }
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await pwKey(pw, salt), data));
+  const all = new Uint8Array(1 + 16 + 12 + ct.length); all[0] = flag; all.set(salt, 1); all.set(iv, 17); all.set(ct, 29);
+  return SHARE_BASE + '#inv=' + b64u.enc(all);
+}
+async function openShareLink(token, pw) {
+  const all = b64u.dec(token); const flag = all[0];
+  const plain = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: all.slice(17, 29) }, await pwKey(pw, all.slice(1, 17)), all.slice(29)));
+  const bytes = flag === 1 ? await streamThrough(plain, new DecompressionStream('deflate-raw')) : plain;
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+const shareToken = (location.hash.match(/^#inv=([A-Za-z0-9_-]+)$/) || [])[1] || null;
+function renderShareViewer() {
+  document.querySelector('.app').hidden = true;
+  const box = document.createElement('div'); box.className = 'shareview'; box.id = 'shareView'; document.body.appendChild(box);
+  box.innerHTML = '<div class="lockcard"><img src="' + LOGO + '" alt="" class="lockLogo"><h1>Tax invoice</h1><p>This invoice is protected. Enter the password you were given to open it.</p>' +
+    '<form id="pwForm" class="pwrow"><label class="f" for="pwIn">Password<input id="pwIn" type="password" autocomplete="off" autofocus></label><button class="primary" type="submit" id="pwGo">Open invoice</button></form><p class="status" id="pwMsg" role="status"></p></div>';
+  $('pwForm').addEventListener('submit', async e => {
+    e.preventDefault(); const pw = $('pwIn').value; if (!pw) return;
+    $('pwGo').disabled = true; $('pwMsg').className = 'status'; $('pwMsg').textContent = 'Opening…';
+    try {
+      const p = await openShareLink(shareToken, pw);
+      Object.assign(profile, { name: p.name, tfn: p.tfn }); // shown on this invoice only; nothing is saved
+      const inv = p.inv; const t = totalsOf(inv);
+      box.innerHTML = '<div class="sharedoc"><div class="pagehead"><div><h1>Tax invoice ' + esc(inv.no) + '</h1><p>From ' + esc(p.name || 'the sender') + ' · ' + esc(fmtDate(inv.date)) + ' · ' + esc(aud(t.all)) + '</p></div>' +
+        '<div class="actions"><button class="primary" type="button" id="shDl">Download PDF</button></div></div><p class="status" id="status" role="status"></p>' +
+        '<div class="paperbox"><div class="paper">' + paperSVG(inv) + '</div></div></div>';
+      $('shDl').addEventListener('click', async () => { const r = await downloadPdf(inv); say(r.msg, r.ok ? 'ok' : 'bad'); });
+    } catch (err) {
+      $('pwGo').disabled = false; $('pwMsg').className = 'status bad';
+      $('pwMsg').textContent = (err && err.name === 'OperationError') ? 'That password is not right. Check it and try again.' : 'This link could not be opened. It may have been cut short when it was copied.';
+    }
+  });
+}
+function wireSharePanel(inv) {
+  $('vShare').addEventListener('click', () => {
+    const box = $('shareBox'); if (box.innerHTML) { box.innerHTML = ''; return; }
+    const saved = store.get('sharePw', '');
+    box.innerHTML = '<div class="sharepanel"><p>Make a link your boss can open in any browser. They will need the password to see the invoice and download the PDF.</p>' +
+      '<div class="pwrow"><label class="f" for="shPw">Password for this link<input id="shPw" type="text" autocomplete="off" value="' + esc(saved) + '" placeholder="Choose a password"></label><button class="primary" type="button" id="shMake">Create link</button></div>' +
+      '<div id="shOut"></div><p class="hint">The invoice is locked inside the link itself. It is not uploaded anywhere. Send the password separately from the link (for example, tell them once in person or by text).</p></div>';
+    $('shMake').addEventListener('click', async () => {
+      const pw = $('shPw').value; if (pw.length < 6) { $('shOut').innerHTML = '<p class="status bad">Use a password of at least 6 characters.</p>'; return; }
+      store.set('sharePw', pw); $('shMake').disabled = true;
+      try {
+        const link = await makeShareLink(inv, pw);
+        $('shOut').innerHTML = '<div class="linkrow"><input id="shLink" type="text" readonly value="' + esc(link) + '" aria-label="Share link"><button class="secondary" type="button" id="shCopy">Copy link</button>' +
+          (navigator.share && !window.claude ? '<button class="secondary" type="button" id="shSend">Send…</button>' : '') + '</div><p class="status" id="shMsg" role="status"></p>';
+        $('shLink').addEventListener('focus', e => e.target.select());
+        $('shCopy').addEventListener('click', () => {
+          const done = ok => { $('shMsg').className = 'status ' + (ok ? 'ok' : ''); $('shMsg').textContent = ok ? 'Link copied. Paste it into your message.' : 'Select the link above and copy it.'; if (!ok) $('shLink').select(); };
+          try { navigator.clipboard.writeText(link).then(() => done(true), () => done(false)); } catch (e) { done(false); }
+        });
+        if ($('shSend')) $('shSend').addEventListener('click', () => { navigator.share({ title: 'Tax invoice ' + inv.no, text: 'Tax invoice ' + inv.no + ' (' + fmtDate(inv.date) + ')', url: link }).catch(() => {}); });
+      } catch (e) { $('shOut').innerHTML = '<p class="status bad">This browser could not make the link. Try a current version of Chrome, Safari or Edge.</p>'; }
+      $('shMake').disabled = false;
+    });
+  });
+}
+
 if ('serviceWorker' in navigator && location.protocol === 'https:') { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); }); }
 
-render();
-if (!window.jspdf) window.addEventListener('load', render);
+if (shareToken) renderShareViewer(); else render();
+if (!window.jspdf && !shareToken) window.addEventListener('load', render);
 (async function connect() {
+  if (shareToken) { return; }
   const use = window.claude && window.claude.use ? window.claude.use.bind(window.claude) : null;
   if (use) {
     try { downloads = await use('downloads'); } catch (e) { downloads = null; }
