@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-/Cn/dcebxe8G7QLvskNRRlvgKgSL/CHx4/poctC/hg0=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oUvyj/A2auCUMHC3ntT8d5fOpTYI7Yys/BJUhQaRdrk=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
 <meta name="theme-color" content="#b0127a">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="leaflet/leaflet.css">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -202,6 +203,31 @@ a.sendbtn:hover { filter: brightness(1.08); } a.sendbtn:focus-visible { outline:
 .tplrow { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr) auto; gap: 8px; align-items: start; }
 @media (max-width: 640px) { .tplrow { grid-template-columns: minmax(0, 1fr) auto; } .tplrow textarea { grid-column: 1 / 2; } }
 code { font-family: var(--font-num); font-size: 12px; background: var(--field); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+.rtjobs { display: flex; flex-direction: column; gap: 12px; }
+.rtjob { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); }
+.rtjob.off { opacity: .6; } .rtmeta { font-size: 13px; color: var(--muted); }
+.homerow { display: grid; grid-template-columns: minmax(0, 180px) minmax(0, 1fr) auto; gap: 8px; }
+.homerow input { font: inherit; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; }
+@media (max-width: 560px) { .homerow { grid-template-columns: minmax(0, 1fr) auto; } .homerow input:first-child { grid-column: 1 / -1; } }
+.rtmap { height: 380px; border-radius: 10px; border: 1px solid var(--line); margin-top: 14px; overflow: hidden; background: var(--field); }
+@media (max-width: 640px) { .rtmap { height: 300px; } }
+.legtxt a { color: var(--accent); }
+.pin { background: var(--accent); color: var(--accent-ink); border-radius: 14px; display: flex !important; align-items: center; justify-content: center; font: 700 13px var(--font-ui); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.pin.home { background: var(--fg); color: var(--bg); } .pin.late { background: var(--warn); }
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.tl { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; }
+.tlt { font-family: var(--font-num); font-size: 13px; text-align: right; padding-top: 12px; font-variant-numeric: tabular-nums; }
+.tl > div { border-left: 2px solid var(--line); padding: 10px 0 10px 16px; min-width: 0; }
+.tl.leg > div { border-left-style: dashed; padding: 6px 0 6px 16px; } .legtxt { font-size: 13px; color: var(--muted); }
+.tl.stop > div { border-left-color: var(--accent); } .tl.stop.late > div { border-left-color: var(--warn); } .tl.stop.done { opacity: .6; }
+.tl.home b { font-size: 14px; }
+.stophead { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .stopno { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.tl.stop.late .stopno { background: var(--warn); }
+.stopsub { margin: 4px 0 0; font-size: 13px; color: var(--muted); } .stopbtns { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
+.stopbtns .linkish[disabled] { opacity: .35; text-decoration: none; }
+a.navlink { display: inline-block; text-decoration: none; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 16px; }
+.okv { color: var(--good); } .warnv { color: var(--warn); }
+@media (max-width: 480px) { .tl { grid-template-columns: 64px minmax(0, 1fr); gap: 8px; } }
 .syncline { display: flex; gap: 8px; align-items: center; margin: 0; }
 .sharepanel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); display: flex; flex-direction: column; gap: 10px; }
 .sharepanel p { margin: 0; font-size: 14px; }
@@ -275,6 +301,7 @@ button.danger:hover { border-color: var(--warn); }
       <button class="navbtn new" type="button" id="navNew">+ New invoice</button>
       <button class="navbtn" type="button" id="navDash">Dashboard</button>
       <button class="navbtn" type="button" id="navMsg">Client messages</button>
+      <button class="navbtn" type="button" id="navRoute">Route planner</button>
       <button class="navbtn" type="button" id="navRun">Run sheet</button>
       <button class="navbtn" type="button" id="navImport">Import old invoices</button>
     </nav>
@@ -355,7 +382,9 @@ function cleanSettings(d) {
   const m = {}; const src = d && typeof d.merchants === 'object' && d.merchants ? d.merchants : {};
   Object.keys(src).slice(0, 500).forEach(k => { if (/^[a-z ]{1,60}$/.test(k)) m[k] = S(src[k], 40); });
   const tp = Array.isArray(d && d.templates) ? d.templates.slice(0, 20).filter(x => x && typeof x === 'object').map(x => ({ id: S(x.id, 20), label: S(x.label, 40), text: S(x.text, 600) })) : [];
-  return { merchants: m, sheetLink: S(d && d.sheetLink, 300), templates: tp };
+  const rs = d && d.route && typeof d.route === 'object' ? d.route : {}; const num = (v, a, b, x) => { v = parseInt(v, 10); return isFinite(v) ? Math.min(b, Math.max(a, v)) : x; };
+  const route = { homes: (Array.isArray(rs.homes) ? rs.homes : []).slice(0, 6).filter(h => h && typeof h === 'object').map(h => ({ label: S(h.label, 40), addr: S(h.addr, 200) })), setupMins: num(rs.setupMins, 5, 240, 45), packMins: num(rs.packMins, 5, 240, 30), bufferMins: num(rs.bufferMins, 0, 120, 15) };
+  return { merchants: m, sheetLink: S(d && d.sheetLink, 300), templates: tp, route, mapsKey: /^[A-Za-z0-9_-]{0,60}$/.test(S(d && d.mapsKey, 60)) ? S(d && d.mapsKey, 60) : '' };
 }
 function tooBig(f, max = LIMITS.uploadBytes) { return !f || f.size > max; }
 
@@ -430,6 +459,7 @@ $('navImport').addEventListener('click', () => go({ name: 'import' }));
 $('navRun').addEventListener('click', () => go({ name: 'runsheet' }));
 $('acctBtn').addEventListener('click', () => go({ name: 'account' }));
 $('navMsg').addEventListener('click', () => go({ name: 'messages' }));
+$('navRoute').addEventListener('click', () => go({ name: 'route' }));
 const weekOfInv = inv => inv.weekStart || invoiceWeekStart(inv.date);
 function invoiceForWeek(ws, exceptNo) { return sorted().find(i => weekOfInv(i) === ws && Number(i.no) !== Number(exceptNo)); }
 function startNewInvoice() { draft = freshDraft(); store.set('draft', draft); go({ name: 'edit' }); }
@@ -482,6 +512,7 @@ function render() { renderSide(); const v = $('view');
   else if (route.name === 'runsheet') renderRunSheet();
   else if (route.name === 'account') renderAccount();
   else if (route.name === 'messages') renderMessages();
+  else if (route.name === 'route') renderRoute();
 }
 
 function renderSide() {
@@ -494,6 +525,7 @@ function renderSide() {
   $('navImport').setAttribute('aria-current', route.name === 'import' ? 'page' : 'false');
   $('navRun').setAttribute('aria-current', route.name === 'runsheet' ? 'page' : 'false');
   $('navMsg').setAttribute('aria-current', route.name === 'messages' ? 'page' : 'false');
+  $('navRoute').setAttribute('aria-current', route.name === 'route' ? 'page' : 'false');
   const list = $('invList'); const all = sorted();
   $('listCount').textContent = 'Invoices' + (loaded ? ' (' + all.length + ')' : '');
   if (!loaded) { list.innerHTML = '<li class="sidenote">Loading your invoices…</li>'; }
@@ -1044,7 +1076,7 @@ function applyWeek(inv, ws, jobs) {
 }
 
 /* ---------- import invoices made in Word (.docx) or saved as PDF ---------- */
-const LIBS = { jszip: "jszip.min.js", pdf: "pdf.min.js", pdfworker: "pdf.worker.min.js", xlsx: "xlsx.full.min.js", tess: "ocr/tesseract.min.js", fb: "fb.js" };
+const LIBS = { jszip: "jszip.min.js", pdf: "pdf.min.js", pdfworker: "pdf.worker.min.js", xlsx: "xlsx.full.min.js", tess: "ocr/tesseract.min.js", fb: "fb.js", leaflet: "leaflet/leaflet.js" };
 const libLoads = {};
 function loadLib(key, globalName) {
   if (window[globalName]) return Promise.resolve();
@@ -1451,7 +1483,7 @@ const cloud = {
   delReceipt(id) { return window.SKFB.deleteDoc(window.SKFB.doc(this.col('receipts'), id)); },
   saveProfile(p) { return window.SKFB.setDoc(this.ref('private', 'profile'), { name: S(p.name, 80), tfn: S(p.tfn, 20) }); },
   saveMember(d) { d = Object.assign({}, d); if ('name' in d) d.name = S(d.name, 40); if ('phone' in d) d.phone = S(d.phone, 20); if ('photo' in d) d.photo = safePhoto(d.photo); return window.SKFB.updateDoc(window.SKFB.doc(this.fs, 'users', this.user.uid), Object.assign({ updatedAt: new Date().toISOString() }, d)); },
-  saveSettings() { return window.SKFB.setDoc(this.ref('private', 'settings'), cleanSettings({ merchants: settings.merchants, sheetLink: sheetCfg.link, templates: settings.templates })).catch(() => {}); },
+  saveSettings() { return window.SKFB.setDoc(this.ref('private', 'settings'), cleanSettings({ merchants: settings.merchants, sheetLink: sheetCfg.link, templates: settings.templates, route: settings.route, mapsKey: settings.mapsKey })).catch(() => {}); },
   async signOutAll() {
     const F = window.SKFB;
     const saved = await Promise.race([F.waitForPendingWrites(this.fs).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), 6000))]);
@@ -1661,6 +1693,337 @@ async function msFetch() {
   const d = dateOf(ms.date); ms.loading = true; renderMessages();
   const r = await loadMonth(d.getFullYear(), d.getMonth(), false);
   ms.loading = false; ms.data = r; if (route.name === 'messages') renderMessages();
+}
+
+/* ---------- route planner: the day's jobs in the best order, with live Google traffic ----------
+   Each job becomes a set-up stop (between its earliest set-up time and the booth start) and, unless
+   the worker stays for the event, a pack-down stop after the booth finishes. Driving times come from
+   Google's Routes API (traffic-aware, for the time you will actually be driving). */
+const DAY = 1440;
+function parseClock(str, assumePm) {
+  const s = String(str || '').toLowerCase();
+  const m = s.match(/(\d{1,2})(?:[:.](\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?/); if (!m) return null;
+  let h = +m[1], mi = +(m[2] || 0); if (h > 23 || mi > 59) return null;
+  let ap = m[3] || (s.match(/\b(am|pm)\b/) || [])[1] || '';
+  if (/^p/.test(ap) && h < 12) h += 12; else if (/^a/.test(ap) && h === 12) h = 0; else if (!ap && assumePm && h < 9) h += 12;
+  return h * 60 + mi;
+}
+function boothRange(t) {
+  const m = String(t || '').match(/(\d{1,2}(?::\d{2})?\s*(?:[AaPp][Mm])?)\s*(?:-|–|to)\s*(\d{1,2}(?::\d{2})?\s*(?:[AaPp][Mm])?)/);
+  if (!m) { const one = parseClock(t, true); return one == null ? null : { start: one, end: one + 240 }; }
+  const ap = (String(t).match(/[AaPp][Mm]/g) || []);
+  let a = parseClock(m[1] + (/[ap]m/i.test(m[1]) ? '' : ' ' + (ap[0] || '')), true), b = parseClock(m[2] + (/[ap]m/i.test(m[2]) ? '' : ' ' + (ap[ap.length - 1] || '')), true);
+  if (a == null || b == null) return null; if (b <= a) b += DAY; return { start: a, end: b };
+}
+const hm = mins => { if (mins == null || !isFinite(mins)) return '—'; let m = Math.round(mins); const nextDay = m >= DAY; m = ((m % DAY) + DAY) % DAY; let h = Math.floor(m / 60), mi = m % 60; const ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return h + ':' + String(mi).padStart(2, '0') + ap + (nextDay ? ' (next day)' : ''); };
+const dur = mins => { mins = Math.round(mins); if (mins < 60) return mins + ' min'; return Math.floor(mins / 60) + ' h' + (mins % 60 ? ' ' + (mins % 60) + ' min' : ''); };
+const km = m => (m / 1000).toFixed(m < 10000 ? 1 : 0) + ' km';
+function jobAddress(j) {
+  const a = (j.address || '').replace(/^home,?\s*/i, '').trim(); const v = (j.venue || '').trim();
+  let s = a || [v, j.suburb].filter(Boolean).join(', ');
+  if (s && !/\b(vic|victoria|nsw|qld|sa|wa|tas|act|nt)\b/i.test(s)) s += ', VIC';
+  return s ? s + ', Australia' : '';
+}
+const rtCfg = () => Object.assign({ homes: [], setupMins: 45, packMins: 30, bufferMins: 15 }, settings.route || {});
+const mapsKey = () => S(settings.mapsKey || store.get('mapsKey', ''), 100);
+
+// ---- Google Routes API (traffic-aware) ----
+async function gRoutes(path, body, fieldMask) {
+  const key = mapsKey(); if (!key) throw Object.assign(new Error('nokey'), { code: 'nokey' });
+  let res;
+  try { res = await fetch('https://routes.googleapis.com/' + path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': fieldMask }, body: JSON.stringify(body), referrerPolicy: 'strict-origin-when-cross-origin' }); }
+  catch (e) { throw Object.assign(new Error('offline'), { code: 'offline' }); }
+  const data = await res.json().catch(() => null);
+  if (!res.ok) { const msg = data && data.error && data.error.message || ('HTTP ' + res.status); throw Object.assign(new Error(msg), { code: res.status === 403 || res.status === 400 && /key/i.test(msg) ? 'key' : 'api' }); }
+  return data;
+}
+const wp = p => p.lat != null ? { location: { latLng: { latitude: p.lat, longitude: p.lng } } } : { address: p.address };
+function depTime(dateIso, mins) { const d = dateOf(dateIso); d.setMinutes(mins); return d.getTime() > Date.now() + 60000 ? d.toISOString() : null; }
+async function trafficMatrix(points, dateIso, mins) {
+  const body = { origins: points.map(p => ({ waypoint: wp(p) })), destinations: points.map(p => ({ waypoint: wp(p) })), travelMode: 'DRIVE', routingPreference: 'TRAFFIC_AWARE' };
+  const dt = depTime(dateIso, mins); if (dt) body.departureTime = dt;
+  const rows = await gRoutes('distanceMatrix/v2:computeRouteMatrix', body, 'originIndex,destinationIndex,duration,distanceMeters,condition,status');
+  const M = points.map(() => points.map(() => null));
+  (Array.isArray(rows) ? rows : []).forEach(e => { if (e && e.condition === 'ROUTE_EXISTS' && e.duration) M[e.originIndex][e.destinationIndex] = { mins: parseInt(e.duration, 10) / 60, m: e.distanceMeters || 0 }; });
+  points.forEach((p, i) => { M[i][i] = { mins: 0, m: 0 }; });
+  return M;
+}
+async function trafficLeg(a, b, dateIso, mins) {
+  const body = { origin: wp(a), destination: wp(b), travelMode: 'DRIVE', routingPreference: 'TRAFFIC_AWARE_OPTIMAL' };
+  const dt = depTime(dateIso, mins); if (dt) body.departureTime = dt;
+  const d = await gRoutes('directions/v2:computeRoutes', body, 'routes.duration,routes.staticDuration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.startLocation,routes.legs.endLocation');
+  const r = d && d.routes && d.routes[0]; if (!r) throw Object.assign(new Error('noroute'), { code: 'noroute' });
+  const leg = (r.legs || [])[0] || {}; const ll = x => x && x.latLng ? [x.latLng.latitude, x.latLng.longitude] : null;
+  return { mins: parseInt(r.duration, 10) / 60, usual: r.staticDuration ? parseInt(r.staticDuration, 10) / 60 : null, m: r.distanceMeters || 0, poly: (r.polyline || {}).encodedPolyline || '', from: ll(leg.startLocation), to: ll(leg.endLocation), traffic: !!dt };
+}
+function decodePolyline(s) { const pts = []; let i = 0, lat = 0, lng = 0; while (i < s.length) { let b, sh = 0, r = 0; do { b = s.charCodeAt(i++) - 63; r |= (b & 31) << sh; sh += 5; } while (b >= 32); lat += r & 1 ? ~(r >> 1) : r >> 1; sh = 0; r = 0; do { b = s.charCodeAt(i++) - 63; r |= (b & 31) << sh; sh += 5; } while (b >= 32); lng += r & 1 ? ~(r >> 1) : r >> 1; pts.push([lat / 1e5, lng / 1e5]); } return pts; }
+
+// ---- building stops and finding the best order ----
+function buildStops(plan) {
+  const c = plan.cfg; const stops = [];
+  plan.jobs.filter(j => j.include).forEach(j => {
+    const br = boothRange(j.booth); const start = br ? br.start : null; const end = br ? br.end : null;
+    let early = parseClock(j.setup, true); if (early == null || (start != null && early > start)) early = start != null ? start - 180 : 9 * 60;
+    const latest = start != null ? start - c.setupMins - c.bufferMins : early + 240;
+    let pick = parseClock(j.pickup, true); if (pick == null || end == null || pick < end - 120 || pick > end + 360) pick = end; else if (pick < end) pick = end;
+    stops.push({ id: j.key + '|s', kind: 'setup', job: j.key, label: 'Set up', name: j.client, place: j.venue || j.suburb, addr: j.addr, early, latest, dur: c.setupMins, stayUntil: j.stay ? end : null, packAfterStay: j.stay ? c.packMins : 0, boothStart: start, boothEnd: end });
+    if (!j.stay && end != null) stops.push({ id: j.key + '|p', kind: 'pack', job: j.key, label: 'Pack down', name: j.client, place: j.venue || j.suburb, addr: j.addr, early: pick, latest: pick + 90, dur: c.packMins, boothEnd: end });
+  });
+  (plan.extras || []).forEach(x => stops.push({ id: x.id, kind: 'extra', label: x.label || 'Stop', name: x.label || 'Stop', place: x.addr, addr: x.addr, early: x.at != null ? x.at : 0, latest: x.at != null ? x.at + 60 : 3 * DAY, dur: x.mins || 15 }));
+  return stops.filter(s => !(plan.done || []).includes(s.id) || plan.keepDone);
+}
+// Walk an order and work out times. travel(i, j, departMins) returns minutes between points.
+function simulate(order, stops, startPt, travel, leaveAt) {
+  let t = leaveAt, prev = 'start', late = 0, drive = 0, wait = 0; const out = [];
+  if (t == null) { const first = stops[order[0]]; t = first ? first.early - travel('start', order[0], first.early) : 9 * 60; }
+  const leave = t;
+  for (const k of order) {
+    const s = stops[k]; const tr = travel(prev, k, t); drive += tr; const arrive = t + tr;
+    const begin = Math.max(arrive, s.early); wait += begin - arrive;
+    const lateBy = Math.max(0, begin - s.latest); late += lateBy;
+    let leaveStop = begin + s.dur; if (s.stayUntil != null) leaveStop = Math.max(leaveStop, s.stayUntil) + s.packAfterStay;
+    out.push({ k, drive: tr, arrive, begin, end: begin + s.dur, leave: leaveStop, lateBy, waitBefore: begin - arrive });
+    t = leaveStop; prev = k;
+  }
+  const home = travel(prev, 'end', t); drive += home;
+  return { leave, steps: out, backHome: t + home, homeDrive: home, late, drive, wait, cost: late * 1000 + drive + wait * 0.05 };
+}
+function bestOrder(stops, travel, leaveAt) {
+  const n = stops.length; if (!n) return [];
+  if (n > 11) return stops.map((s, i) => i).sort((a, b) => stops[a].early - stops[b].early);
+  let best = null, bestCost = Infinity; const used = new Array(n).fill(false); const order = [];
+  const ok = k => stops[k].kind !== 'pack' || order.some(o => stops[o].job === stops[k].job && stops[o].kind === 'setup') || !stops.some(s => s.job === stops[k].job && s.kind === 'setup');
+  (function dfs() {
+    if (order.length) { const part = simulate(order, stops, null, travel, leaveAt); if (part.cost - part.homeDrive >= bestCost) return; }
+    if (order.length === n) { const r = simulate(order, stops, null, travel, leaveAt); if (r.cost < bestCost) { bestCost = r.cost; best = order.slice(); } return; }
+    for (let k = 0; k < n; k++) { if (used[k] || !ok(k)) continue; used[k] = true; order.push(k); dfs(); order.pop(); used[k] = false; }
+  })();
+  return best || stops.map((s, i) => i);
+}
+
+// ---- the page ----
+let rt = { date: null, data: null, loading: false, plan: null, busy: '', msg: null, edit: false };
+function planKey(d) { return 'plan.' + d; }
+function loadPlan(date, jobs) {
+  const saved = rt.saved && rt.saved[date] || store.get(planKey(date), null);
+  const c = rtCfg();
+  const base = { date, start: c.homes[0] ? 0 : -1, end: c.homes[0] ? 0 : -1, cfg: { setupMins: c.setupMins, packMins: c.packMins, bufferMins: c.bufferMins }, jobs: [], extras: [], order: null, done: [], leaveAt: null, result: null };
+  const p = Object.assign(base, saved || {});
+  const prevJobs = new Map((p.jobs || []).map(j => [j.key, j]));
+  p.jobs = jobs.map(j => { const key = jobKey(j); const old = prevJobs.get(key) || {};
+    return { key, client: (j.client || 'Client').replace(/\s+/g, ' '), venue: (j.venue || '').replace(/\s+/g, ' '), suburb: j.suburb, booth: j.booth, setup: j.setup, pickup: j.pickup,
+      addr: old.addr || jobAddress(j), include: old.include !== false, stay: old.stay != null ? old.stay : attendantHours(j) > 0 && /full/i.test(j.staffNote || '') }; });
+  return p;
+}
+function savePlan() {
+  const p = rt.plan; if (!p) return; const copy = JSON.parse(JSON.stringify(p));
+  store.set(planKey(p.date), copy);
+  if (mode === 'cloud') { const doc = { date: p.date, json: JSON.stringify(copy).slice(0, 900000), at: Date.now() }; window.SKFB.setDoc(cloud.ref('private', 'plan-' + p.date), doc).catch(() => {}); }
+}
+async function fetchCloudPlan(date) {
+  if (mode !== 'cloud') return null;
+  try { const s = await window.SKFB.getDoc(cloud.ref('private', 'plan-' + date)); if (s.exists()) { const v = JSON.parse(s.data().json || 'null'); if (v && v.date === date) return v; } } catch (e) {}
+  return null;
+}
+function pointFor(p, which) {
+  const c = rtCfg(); const idx = which === 'start' ? p.start : p.end;
+  if (which === 'start' && p.here) return { lat: p.here.lat, lng: p.here.lng, label: 'Where I was' };
+  if (idx === -2) return { address: p[which + 'Custom'] || '', label: p[which + 'Custom'] || 'Other address' };
+  const h = c.homes[idx]; return h ? { address: h.addr, label: h.label || 'Home' } : null;
+}
+
+async function computePlan(keepOrder) {
+  const p = rt.plan; const stops = buildStops(p);
+  const startPt = pointFor(p, 'start'), endPt = pointFor(p, 'end');
+  if (!startPt || !endPt || (!startPt.address && startPt.lat == null) || (!endPt.address && endPt.lat == null)) { rt.msg = { text: 'Choose where you start and finish first.', kind: 'bad' }; renderRoute(); return; }
+  if (!stops.length) { rt.msg = { text: 'Tick at least one job to plan a route.', kind: 'bad' }; renderRoute(); return; }
+  const missing = stops.find(s => !s.addr); if (missing) { rt.msg = { text: 'Add an address for ' + missing.name + ' first.', kind: 'bad' }; renderRoute(); return; }
+  rt.busy = 'Getting live traffic from Google Maps…'; rt.msg = null; renderRoute();
+  try {
+    // 1) one traffic-aware matrix between every place, for the time the day starts
+    const pts = [startPt, endPt].concat(stops.map(s => ({ address: s.addr })));
+    const firstTime = Math.min(...stops.map(s => s.early)) - 60;
+    const M = await trafficMatrix(pts, p.date, p.leaveAt != null ? p.leaveAt : firstTime);
+    const idx = x => x === 'start' ? 0 : x === 'end' ? 1 : x + 2;
+    const bad = stops.findIndex((s, i) => !M[0][i + 2] && !M[i + 2][0]);
+    if (bad >= 0) { rt.busy = ''; rt.msg = { text: 'Google Maps could not find "' + stops[bad].addr + '". Fix the address for ' + stops[bad].name + ' and try again.', kind: 'bad' }; renderRoute(); return; }
+    const travel = (a, b) => { const e = M[idx(a)][idx(b)]; return e ? e.mins : 60; };
+    // 2) best order (or keep the order the worker set)
+    let order;
+    if (keepOrder && p.order) { order = p.order.map(id => stops.findIndex(s => s.id === id)).filter(i => i >= 0); stops.forEach((s, i) => { if (!order.includes(i)) order.push(i); }); }
+    else order = bestOrder(stops, travel, p.leaveAt);
+    let sim = simulate(order, stops, startPt, travel, p.leaveAt);
+    // 3) exact legs with traffic for the time each drive starts
+    rt.busy = 'Checking traffic for each drive…'; renderRoute();
+    const seq = [startPt].concat(order.map(k => ({ address: stops[k].addr }))).concat([endPt]);
+    const legs = [];
+    let t = sim.leave;
+    for (let i = 0; i < seq.length - 1; i++) {
+      const leg = await trafficLeg(seq[i], seq[i + 1], p.date, t); legs.push(leg);
+      if (i < order.length) { const s = stops[order[i]]; const arrive = t + leg.mins; const begin = Math.max(arrive, s.early); let lv = begin + s.dur; if (s.stayUntil != null) lv = Math.max(lv, s.stayUntil) + s.packAfterStay; t = lv; }
+    }
+    // re-run the times with the exact leg durations (and leave home later/earlier to match the first set-up)
+    const legMins = legs.map(l => l.mins);
+    const travel2 = (a, b) => { if (a === 'start') return legMins[0]; const pos = order.indexOf(a); return legMins[pos + 1]; };
+    sim = simulate(order, stops, startPt, travel2, p.leaveAt);
+    p.order = order.map(k => stops[k].id);
+    p.result = { at: Date.now(), leave: sim.leave, backHome: sim.backHome, late: sim.late, drive: sim.drive, wait: sim.wait,
+      steps: sim.steps.map((st, i) => Object.assign({ id: stops[st.k].id }, st, { k: undefined, leg: { mins: legs[i].mins, usual: legs[i].usual, m: legs[i].m, poly: legs[i].poly, to: legs[i].to, from: legs[i].from, traffic: legs[i].traffic } })),
+      home: { mins: legs[legs.length - 1].mins, usual: legs[legs.length - 1].usual, m: legs[legs.length - 1].m, poly: legs[legs.length - 1].poly, to: legs[legs.length - 1].to, traffic: legs[legs.length - 1].traffic },
+      stops: stops.map(s => ({ id: s.id, kind: s.kind, label: s.label, name: s.name, place: s.place, addr: s.addr, early: s.early, latest: s.latest, dur: s.dur, stayUntil: s.stayUntil, boothStart: s.boothStart, boothEnd: s.boothEnd })),
+      startLabel: startPt.label, endLabel: endPt.label, startAddr: startPt.address || (startPt.lat + ',' + startPt.lng), endAddr: endPt.address };
+    rt.busy = ''; rt.msg = { text: 'Route planned with ' + (legs.some(l => l.traffic) ? 'live and predicted traffic' : 'current traffic') + ' at ' + hm(new Date().getHours() * 60 + new Date().getMinutes()) + '.', kind: 'ok' };
+    savePlan(); renderRoute();
+  } catch (e) {
+    rt.busy = '';
+    rt.msg = { kind: 'bad', text: e.code === 'nokey' ? 'Add your Google Maps key below first (see the setup steps).' : e.code === 'key' ? 'Google Maps refused the key: ' + e.message + '. Check the key and that the Routes API is switched on.' : e.code === 'offline' ? 'No internet connection, so live traffic could not be checked. Connect and try again.' : 'Google Maps could not plan this route (' + e.message + ').' };
+    renderRoute();
+  }
+}
+
+function renderRoute() {
+  if (!rt.date) rt.date = todayISO();
+  const d = dateOf(rt.date); const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  const data = rt.data && rt.data.key === key ? rt.data : null;
+  const jobs = data ? (data.jobs || []).filter(j => j.date === rt.date) : [];
+  if (data && (!rt.plan || rt.plan.date !== rt.date)) rt.plan = loadPlan(rt.date, jobs);
+  const p = rt.plan && rt.plan.date === rt.date ? rt.plan : null;
+  const c = rtCfg(); const prob = data ? sheetProblem([data]) : '';
+  const homeOpts = (sel, which) => c.homes.map((h, i) => '<option value="' + i + '"' + (sel === i ? ' selected' : '') + '>' + esc(h.label || h.addr) + '</option>').join('') + '<option value="-2"' + (sel === -2 ? ' selected' : '') + '>Another address…</option>';
+  const r = p && p.result;
+  $('view').innerHTML =
+    '<div class="pagehead"><div><h1>Route planner</h1><p>Your jobs for the day in the best order, with driving times from Google Maps traffic.</p></div>' +
+    '<div class="actions"><button class="secondary" type="button" id="rtPrev" aria-label="Previous day">‹</button><b class="monthname">' + esc(rt.date === todayISO() ? 'Today, ' : '') + esc(dayLabel(rt.date)) + '</b><button class="secondary" type="button" id="rtNext" aria-label="Next day">›</button>' + (rt.date !== todayISO() ? '<button class="secondary" type="button" id="rtToday">Today</button>' : '') + '</div></div>' +
+    (prob ? '<p class="notice warn">' + esc(prob) + '</p>' : '') +
+    (!mapsKey() ? '<p class="notice">To use live traffic, add your Google Maps key under "Route settings" below.</p>' : '') +
+    (rt.loading && !data ? '<p class="empty">Loading the run sheet…</p>' : !p || !p.jobs.length ? '<section class="card"><p class="empty">' + (data && !prob ? 'No jobs on the run sheet for ' + esc(dayLabel(rt.date)) + '.' : 'Nothing to plan yet.') + '</p></section>' :
+    '<section class="card"><h2>Jobs this day</h2><div class="rtjobs">' + p.jobs.map((j, i) => {
+      const br = boothRange(j.booth);
+      return '<div class="rtjob' + (j.include ? '' : ' off') + '"><label class="check"><input type="checkbox" data-inc="' + i + '"' + (j.include ? ' checked' : '') + '> <b>' + esc(j.client) + '</b></label>' +
+        '<span class="rtmeta">Booth ' + esc(j.booth || 'time not set') + ' · earliest set-up ' + esc(j.setup || 'not set') + (j.pickup ? ' · pick up ' + esc(j.pickup) : '') + '</span>' +
+        '<label class="f">Address<input type="text" data-addr="' + i + '" value="' + esc(j.addr) + '"></label>' +
+        '<label class="check"><input type="checkbox" data-stay="' + i + '"' + (j.stay ? ' checked' : '') + '> I stay for the whole event' + (br ? ' (until ' + esc(hm(br.end)) + ')' : '') + '</label></div>'; }).join('') + '</div>' +
+      '<div class="fields" style="margin-top:14px"><label class="f">Start from<select id="rtStart" class="sel">' + homeOpts(p.here ? -3 : p.start) + (p.here ? '<option value="-3" selected>Where I was at ' + esc(hm(p.leaveAt)) + '</option>' : '') + '</select></label>' +
+      (p.start === -2 && !p.here ? '<label class="f">Start address<input id="rtStartC" type="text" value="' + esc(p.startCustom || '') + '"></label>' : '') +
+      '<label class="f">Finish at<select id="rtEnd" class="sel">' + homeOpts(p.end) + '</select></label>' + (p.end === -2 ? '<label class="f">Finish address<input id="rtEndC" type="text" value="' + esc(p.endCustom || '') + '"></label>' : '') +
+      '<label class="f">Leave at (optional)<input id="rtLeave" type="time" value="' + (p.leaveAt != null ? String(Math.floor((p.leaveAt % DAY) / 60)).padStart(2, '0') + ':' + String(Math.round(p.leaveAt % 60)).padStart(2, '0') : '') + '"></label></div>' +
+      '<div class="actions" style="margin-top:12px"><button class="primary" type="button" id="rtPlan"' + (rt.busy ? ' disabled' : '') + '>' + (r ? 'Plan again (best order)' : 'Plan my route') + '</button>' + (r ? '<button class="secondary" type="button" id="rtKeep"' + (rt.busy ? ' disabled' : '') + '>Update times, keep my order</button><button class="secondary" type="button" id="rtHere"' + (rt.busy ? ' disabled' : '') + '>Re-plan from where I am now</button>' : '') + '</div>' +
+      (rt.busy ? '<p class="notice">' + esc(rt.busy) + '</p>' : '') + (rt.msg ? '<p class="status ' + rt.msg.kind + '">' + esc(rt.msg.text) + '</p>' : '') + '</section>' +
+      (r ? routeResultHTML(p) : '')) +
+    '<section class="card"><h2>Route settings</h2>' + routeSettingsHTML(c) + '</section>';
+  wireRoute(p, c);
+  if (r) drawMap(p);
+  if (!data && !rt.loading) rtFetch();
+}
+function routeResultHTML(p) {
+  const r = p.result; const byId = id => r.stops.find(s => s.id === id);
+  const lateSteps = r.steps.filter(s => s.lateBy > 0.5);
+  const navUrl = 'https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=' + encodeURIComponent(r.startAddr) + '&destination=' + encodeURIComponent(r.endAddr) + '&waypoints=' + encodeURIComponent(r.steps.slice(0, 9).map(s => byId(s.id).addr).join('|'));
+  return '<section class="card"><h2>Your route</h2>' +
+    '<div class="tiles small"><div class="tile"><span class="k">Leave ' + esc(r.startLabel) + '</span><span class="v">' + esc(hm(r.leave)) + '</span><span class="sub">' + r.steps.length + ' stops</span></div>' +
+    '<div class="tile"><span class="k">Driving</span><span class="v">' + esc(dur(r.drive)) + '</span><span class="sub">' + esc(km(r.steps.reduce((a, s) => a + s.leg.m, 0) + r.home.m)) + ' with traffic</span></div>' +
+    '<div class="tile"><span class="k">Back at ' + esc(r.endLabel) + '</span><span class="v">' + esc(hm(r.backHome)) + '</span><span class="sub">' + esc(dur(r.home.mins)) + ' last drive</span></div>' +
+    '<div class="tile"><span class="k">Timing</span><span class="v ' + (lateSteps.length ? 'warnv' : 'okv') + '">' + (lateSteps.length ? lateSteps.length + ' late' : 'On time') + '</span><span class="sub">' + (lateSteps.length ? 'see the red stops below' : 'every set-up fits its window') + '</span></div></div>' +
+    '<div id="rtMap" class="rtmap" role="img" aria-label="Map of the route"></div>' +
+    '<div class="actions" style="margin:12px 0"><a class="secondary navlink" href="' + esc(navUrl) + '" target="_blank" rel="noopener">Open the whole route in Google Maps</a><button class="secondary" type="button" id="rtAdd">+ Add a stop</button></div>' +
+    '<div id="rtAddBox"></div>' +
+    '<ol class="timeline">' +
+      '<li class="tl home"><span class="tlt">' + esc(hm(r.leave)) + '</span><div><b>Leave ' + esc(r.startLabel) + '</b></div></li>' +
+      r.steps.map((st, i) => { const s = byId(st.id); const done = (p.done || []).includes(st.id); const late = st.lateBy > 0.5;
+        const legTxt = dur(st.leg.mins) + ' drive · ' + km(st.leg.m) + (st.leg.usual && st.leg.mins - st.leg.usual >= 3 ? ' · ' + Math.round(st.leg.mins - st.leg.usual) + ' min extra from traffic' : st.leg.traffic ? ' · traffic is light' : '');
+        return '<li class="tl leg"><span class="tlt"></span><div class="legtxt">' + esc(legTxt) + ' <a href="' + esc('https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(s.addr)) + '" target="_blank" rel="noopener">Google Maps</a> · <a href="' + esc('https://maps.apple.com/?dirflg=d&daddr=' + encodeURIComponent(s.addr)) + '" target="_blank" rel="noopener">Apple Maps</a></div></li>' +
+          '<li class="tl stop' + (late ? ' late' : '') + (done ? ' done' : '') + '"><span class="tlt">' + esc(hm(st.begin)) + '</span><div><div class="stophead"><span class="stopno">' + (i + 1) + '</span><b>' + esc(s.label) + ': ' + esc(s.name) + '</b>' + (done ? '<span class="pill paid">Done</span>' : '') + '</div>' +
+          '<p class="stopsub">' + esc(s.place || '') + ' · arrive ' + esc(hm(st.arrive)) + (st.waitBefore > 4 ? ' (wait ' + esc(dur(st.waitBefore)) + ')' : '') + ' · ' + (s.kind === 'setup' ? 'set up ' + esc(hm(st.begin)) + '–' + esc(hm(st.end)) + (s.boothStart != null ? ', booth starts ' + esc(hm(s.boothStart)) : '') + (s.stayUntil != null ? ', staying until ' + esc(hm(s.stayUntil)) : '') : s.kind === 'pack' ? 'booth ends ' + esc(hm(s.boothEnd)) + ', pack down ' + esc(hm(st.begin)) + '–' + esc(hm(st.end)) : esc(dur(s.dur)) + ' stop') + '</p>' +
+          (late ? '<p class="status bad">' + (s.kind === 'setup' ? 'Set-up would finish ' + esc(dur(st.lateBy)) + ' too late for the booth start (with your ' + p.cfg.bufferMins + ' min buffer).' : 'About ' + esc(dur(st.lateBy)) + ' later than planned.') + '</p>' : '') +
+          '<div class="stopbtns"><button class="linkish" type="button" data-up="' + i + '"' + (i === 0 ? ' disabled' : '') + '>Move up</button><button class="linkish" type="button" data-down="' + i + '"' + (i === r.steps.length - 1 ? ' disabled' : '') + '>Move down</button><button class="linkish" type="button" data-done="' + esc(st.id) + '">' + (done ? 'Not done' : 'Mark done') + '</button>' + (s.kind === 'extra' ? '<button class="linkish" type="button" data-rmx="' + esc(st.id) + '">Remove</button>' : '') + '</div></div></li>'; }).join('') +
+      '<li class="tl leg"><span class="tlt"></span><div class="legtxt">' + esc(dur(r.home.mins) + ' drive · ' + km(r.home.m)) + '</div></li>' +
+      '<li class="tl home"><span class="tlt">' + esc(hm(r.backHome)) + '</span><div><b>Back at ' + esc(r.endLabel) + '</b></div></li></ol>' +
+    '<p class="hint">Planned ' + esc(ago(r.at)) + '. After moving stops, press "Update times, keep my order". If something changes on the day, press "Re-plan from where I am now". It uses your location and the traffic right now for the stops not marked done.</p></section>';
+}
+function routeSettingsHTML(c) {
+  return '<div class="stack">' + c.homes.map((h, i) => '<div class="homerow"><input type="text" data-hl="' + i + '" value="' + esc(h.label) + '" placeholder="Name, e.g. Mount Duneed" aria-label="Name"><input type="text" data-ha="' + i + '" value="' + esc(h.addr) + '" placeholder="Full address" aria-label="Address"><button class="iconbtn" type="button" data-hdel="' + i + '" aria-label="Remove address">×</button></div>').join('') +
+    '<div><button class="secondary" type="button" id="rtHomeAdd">+ Add a home or base address</button></div></div>' +
+    '<div class="fields" style="margin-top:14px"><label class="f">Set-up takes (minutes)<input id="rtSetup" type="number" min="5" max="240" value="' + c.setupMins + '"></label><label class="f">Pack-down takes (minutes)<input id="rtPack" type="number" min="5" max="240" value="' + c.packMins + '"></label><label class="f">Ready this long before the booth starts (minutes)<input id="rtBuf" type="number" min="0" max="120" value="' + c.bufferMins + '"></label></div>' +
+    '<label class="f" style="margin-top:14px">Google Maps key (for live traffic)<input id="rtKey" type="password" autocomplete="off" spellcheck="false" value="' + esc(mapsKey()) + '" placeholder="Paste the key that starts with AIza…"></label>' +
+    '<p class="hint">Saved in your account only, never in the website code. Only the Routes API should be allowed on this key.</p>' +
+    '<div class="actions" style="margin-top:10px"><button class="primary" type="button" id="rtSaveCfg">Save route settings</button></div><p class="status" id="rtCfgMsg" role="status"></p>';
+}
+function wireRoute(p, c) {
+  const shift = n => { rt.date = addDays(rt.date, n); rt.plan = null; rt.msg = null; const d = dateOf(rt.date); const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); if (!rt.data || rt.data.key !== key) rt.data = null; renderRoute(); pullCloudPlan(); };
+  $('rtPrev').addEventListener('click', () => shift(-1)); $('rtNext').addEventListener('click', () => shift(1));
+  if ($('rtToday')) $('rtToday').addEventListener('click', () => { rt.date = null; rt.plan = null; rt.data = null; renderRoute(); });
+  // settings
+  const readHomes = () => Array.from(document.querySelectorAll('[data-hl]')).map((el, i) => ({ label: S(el.value.trim(), 40), addr: S(document.querySelector('[data-ha="' + i + '"]').value.trim(), 200) }));
+  $('rtHomeAdd').addEventListener('click', () => { settings.route = Object.assign(rtCfg(), { homes: readHomes().concat([{ label: '', addr: '' }]) }); renderRoute(); });
+  document.querySelectorAll('[data-hdel]').forEach(b => b.addEventListener('click', () => { const h = readHomes(); h.splice(+b.dataset.hdel, 1); settings.route = Object.assign(rtCfg(), { homes: h }); renderRoute(); }));
+  $('rtSaveCfg').addEventListener('click', () => {
+    const cl = (v, a, b, d) => { v = parseInt(v, 10); return isFinite(v) ? Math.min(b, Math.max(a, v)) : d; };
+    settings.route = { homes: readHomes().filter(h => h.addr).slice(0, 6), setupMins: cl($('rtSetup').value, 5, 240, 45), packMins: cl($('rtPack').value, 5, 240, 30), bufferMins: cl($('rtBuf').value, 0, 120, 15) };
+    const k = $('rtKey').value.trim(); if (k && !/^[A-Za-z0-9_-]{30,60}$/.test(k)) { $('rtCfgMsg').className = 'status bad'; $('rtCfgMsg').textContent = 'That does not look like a Google key. It should start with AIza.'; return; }
+    settings.mapsKey = k; if (mode !== 'cloud') store.set('mapsKey', k);
+    saveSettings(); if (p) { p.cfg = { setupMins: settings.route.setupMins, packMins: settings.route.packMins, bufferMins: settings.route.bufferMins }; if (p.start < 0 && p.start !== -2 && settings.route.homes.length) p.start = 0; if (p.end < 0 && p.end !== -2 && settings.route.homes.length) p.end = 0; }
+    rt.msg = { text: 'Route settings saved.', kind: 'ok' }; renderRoute();
+  });
+  if (!p) return;
+  document.querySelectorAll('[data-inc]').forEach(b => b.addEventListener('change', () => { p.jobs[+b.dataset.inc].include = b.checked; savePlan(); renderRoute(); }));
+  document.querySelectorAll('[data-stay]').forEach(b => b.addEventListener('change', () => { p.jobs[+b.dataset.stay].stay = b.checked; savePlan(); }));
+  document.querySelectorAll('[data-addr]').forEach(b => b.addEventListener('change', () => { p.jobs[+b.dataset.addr].addr = S(b.value.trim(), 200); savePlan(); }));
+  $('rtStart').addEventListener('change', e => { const v = +e.target.value; if (v !== -3) { delete p.here; p.start = v; } savePlan(); renderRoute(); });
+  $('rtEnd').addEventListener('change', e => { p.end = +e.target.value; savePlan(); renderRoute(); });
+  if ($('rtStartC')) $('rtStartC').addEventListener('change', e => { p.startCustom = S(e.target.value.trim(), 200); savePlan(); });
+  if ($('rtEndC')) $('rtEndC').addEventListener('change', e => { p.endCustom = S(e.target.value.trim(), 200); savePlan(); });
+  $('rtLeave').addEventListener('change', e => { const v = e.target.value; p.leaveAt = v ? parseClock(v) : null; savePlan(); });
+  $('rtPlan').addEventListener('click', () => { delete p.here; computePlan(false); });
+  if ($('rtKeep')) $('rtKeep').addEventListener('click', () => computePlan(true));
+  if ($('rtHere')) $('rtHere').addEventListener('click', () => {
+    if (!navigator.geolocation) { rt.msg = { text: 'This device cannot share its location. Choose your start address and set "Leave at" instead.', kind: 'bad' }; renderRoute(); return; }
+    rt.busy = 'Finding where you are…'; p.keepDone = false; renderRoute();
+    navigator.geolocation.getCurrentPosition(pos => {
+      const now = new Date(); p.here = { lat: +pos.coords.latitude.toFixed(5), lng: +pos.coords.longitude.toFixed(5) }; p.leaveAt = now.getHours() * 60 + now.getMinutes();
+      if (rt.date !== todayISO()) p.leaveAt = null;
+      computePlan(true);
+    }, () => { rt.busy = ''; rt.msg = { text: 'Location was not shared. Allow location for this site, or pick a start address and set "Leave at".', kind: 'bad' }; renderRoute(); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+  });
+  const move = (i, dlt) => { const o = p.result.steps.map(s => s.id); const [x] = o.splice(i, 1); o.splice(i + dlt, 0, x); p.order = o; savePlan(); computePlan(true); };
+  document.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => move(+b.dataset.up, -1)));
+  document.querySelectorAll('[data-down]').forEach(b => b.addEventListener('click', () => move(+b.dataset.down, 1)));
+  document.querySelectorAll('[data-done]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.done; p.done = p.done || []; const i = p.done.indexOf(id); if (i >= 0) p.done.splice(i, 1); else p.done.push(id); p.keepDone = true; savePlan(); renderRoute(); }));
+  document.querySelectorAll('[data-rmx]').forEach(b => b.addEventListener('click', () => { p.extras = (p.extras || []).filter(x => x.id !== b.dataset.rmx); p.order = (p.order || []).filter(x => x !== b.dataset.rmx); savePlan(); computePlan(true); }));
+  if ($('rtAdd')) $('rtAdd').addEventListener('click', () => {
+    $('rtAddBox').innerHTML = '<div class="sharepanel"><div class="fields"><label class="f">What is it<input id="xLabel" type="text" maxlength="40" placeholder="e.g. Fuel, collect props"></label><label class="f">Address<input id="xAddr" type="text" maxlength="200"></label><label class="f">How long (minutes)<input id="xMins" type="number" min="1" max="240" value="15"></label><label class="f">At a set time (optional)<input id="xAt" type="time"></label></div><div class="actions"><button class="primary" type="button" id="xGo">Add and re-plan</button><button class="secondary" type="button" id="xNo">Cancel</button></div></div>';
+    $('xNo').addEventListener('click', () => { $('rtAddBox').innerHTML = ''; });
+    $('xGo').addEventListener('click', () => { const a = $('xAddr').value.trim(); if (!a) { $('xAddr').focus(); return; }
+      p.extras = (p.extras || []).concat([{ id: 'x' + Date.now().toString(36), label: S($('xLabel').value.trim() || 'Stop', 40), addr: S(a, 200), mins: Math.min(240, Math.max(1, parseInt($('xMins').value, 10) || 15)), at: $('xAt').value ? parseClock($('xAt').value) : null }]);
+      savePlan(); computePlan(false); });
+  });
+}
+let rtMap = null;
+function drawMap(p) {
+  const el = $('rtMap'); if (!el) return;
+  loadLib('leaflet', 'L').then(() => {
+    if (rtMap) { try { rtMap.remove(); } catch (e) {} rtMap = null; }
+    const L = window.L; rtMap = L.map(el, { scrollWheelZoom: false });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap contributors', referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(rtMap);
+    const r = p.result; const bounds = []; const css = getComputedStyle(document.documentElement); const accent = css.getPropertyValue('--accent').trim() || '#b0127a';
+    r.steps.concat([r.home]).forEach(st => { const leg = st.leg || st; if (leg.poly) { const pts = decodePolyline(leg.poly); pts.forEach(x => bounds.push(x)); L.polyline(pts, { color: accent, weight: 4, opacity: 0.85 }).addTo(rtMap); } });
+    const first = r.steps[0] && r.steps[0].leg.from; if (first) { L.marker(first, { icon: L.divIcon({ className: 'pin home', html: '<span>H</span>', iconSize: [28, 28] }), title: r.startLabel }).addTo(rtMap); bounds.push(first); }
+    // one pin per place; a venue visited twice (set up, then pack down) shows both numbers
+    const places = new Map();
+    r.steps.forEach((st, i) => { if (!st.leg.to) return; const k = st.leg.to.map(x => x.toFixed(4)).join(','); const s = r.stops.find(x => x.id === st.id);
+      const g = places.get(k) || { at: st.leg.to, nums: [], titles: [], late: false }; g.nums.push(i + 1); g.titles.push((i + 1) + '. ' + s.label + ': ' + s.name); g.late = g.late || st.lateBy > 0.5; places.set(k, g); });
+    places.forEach(g => { const w = 18 + 10 * g.nums.join('·').length; L.marker(g.at, { icon: L.divIcon({ className: 'pin' + (g.late ? ' late' : ''), html: '<span>' + g.nums.join('·') + '</span>', iconSize: [Math.max(28, w), 28] }), title: g.titles.join('\n') }).addTo(rtMap); bounds.push(g.at); });
+    if (bounds.length) rtMap.fitBounds(bounds, { padding: [24, 24] }); else rtMap.setView([-37.81, 144.96], 9);
+  }).catch(() => { el.innerHTML = '<p class="empty" style="padding:16px">The map could not load. The times below are still correct.</p>'; });
+}
+async function rtFetch() {
+  const d = dateOf(rt.date); rt.loading = true; renderRoute();
+  const r = await loadMonth(d.getFullYear(), d.getMonth(), false);
+  rt.loading = false; rt.data = r; rt.plan = null; await pullCloudPlan(true); if (route.name === 'route') renderRoute();
+}
+async function pullCloudPlan(silent) {
+  const date = rt.date || todayISO(); const v = await fetchCloudPlan(date);
+  if (v) { rt.saved = rt.saved || {}; const local = store.get(planKey(date), null); if (!local || (v.result && (!local.result || v.result.at > local.result.at))) { rt.saved[date] = v; store.set(planKey(date), v); rt.plan = null; } }
+  if (!silent && route.name === 'route') renderRoute();
 }
 
 /* ---------- password-protected share links ----------
