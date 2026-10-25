@@ -1,6 +1,6 @@
 {
-  "name": "Boothkeeper",
-  "short_name": "Boothkeeper",
+  "name": "Boothkeepr",
+  "short_name": "Boothkeepr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
