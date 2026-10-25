@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oUvyj/A2auCUMHC3ntT8d5fOpTYI7Yys/BJUhQaRdrk=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-pbepbGlcU+VVmcAvQYmtiyuehqgXNsQyRD4nMaVKC2s=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -1765,7 +1765,8 @@ function buildStops(plan) {
     const br = boothRange(j.booth); const start = br ? br.start : null; const end = br ? br.end : null;
     let early = parseClock(j.setup, true); if (early == null || (start != null && early > start)) early = start != null ? start - 180 : 9 * 60;
     const latest = start != null ? start - c.setupMins - c.bufferMins : early + 240;
-    let pick = parseClock(j.pickup, true); if (pick == null || end == null || pick < end - 120 || pick > end + 360) pick = end; else if (pick < end) pick = end;
+    let pick = parseClock(j.pickup, true); if (pick != null && end != null && pick < end - 120 && pick + DAY <= end + 360) pick += DAY; // e.g. pick up at 12:00 AM after an 11:30 PM finish
+    if (pick == null || end == null || pick < end - 120 || pick > end + 360) pick = end; else if (pick < end) pick = end;
     stops.push({ id: j.key + '|s', kind: 'setup', job: j.key, label: 'Set up', name: j.client, place: j.venue || j.suburb, addr: j.addr, early, latest, dur: c.setupMins, stayUntil: j.stay ? end : null, packAfterStay: j.stay ? c.packMins : 0, boothStart: start, boothEnd: end });
     if (!j.stay && end != null) stops.push({ id: j.key + '|p', kind: 'pack', job: j.key, label: 'Pack down', name: j.client, place: j.venue || j.suburb, addr: j.addr, early: pick, latest: pick + 90, dur: c.packMins, boothEnd: end });
   });
@@ -2002,7 +2003,7 @@ function drawMap(p) {
   const el = $('rtMap'); if (!el) return;
   loadLib('leaflet', 'L').then(() => {
     if (rtMap) { try { rtMap.remove(); } catch (e) {} rtMap = null; }
-    const L = window.L; rtMap = L.map(el, { scrollWheelZoom: false });
+    const L = window.L; rtMap = L.map(el, { scrollWheelZoom: false, fadeAnimation: false });
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap contributors', referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(rtMap);
     const r = p.result; const bounds = []; const css = getComputedStyle(document.documentElement); const accent = css.getPropertyValue('--accent').trim() || '#b0127a';
     r.steps.concat([r.home]).forEach(st => { const leg = st.leg || st; if (leg.poly) { const pts = decodePolyline(leg.poly); pts.forEach(x => bounds.push(x)); L.polyline(pts, { color: accent, weight: 4, opacity: 0.85 }).addTo(rtMap); } });
