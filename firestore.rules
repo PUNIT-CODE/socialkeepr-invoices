@@ -9,8 +9,8 @@ service cloud.firestore {
 
     match /users/{uid} {
       function validMember(d) {
-        return d.keys().hasOnly(['email', 'name', 'photo', 'role', 'createdAt', 'updatedAt'])
-          && optStr(d, 'email', 200) && optStr(d, 'name', 60) && optStr(d, 'photo', 300000)
+        return d.keys().hasOnly(['email', 'name', 'photo', 'phone', 'role', 'createdAt', 'updatedAt'])
+          && optStr(d, 'email', 200) && optStr(d, 'name', 60) && optStr(d, 'photo', 300000) && optStr(d, 'phone', 20)
           && optStr(d, 'createdAt', 40) && optStr(d, 'updatedAt', 40);
       }
       allow read: if isOwner(uid);
@@ -31,6 +31,13 @@ service cloud.firestore {
         allow create, update: if isOwner(uid) && id.matches('r[a-z0-9]{4,24}')
           && request.resource.data.keys().hasOnly(['id', 'img', 'w', 'h', 'amount', 'date', 'merchant', 'cat', 'createdAt'])
           && str(request.resource.data.img, 1500000) && optStr(request.resource.data, 'merchant', 80);
+      }
+      match /messages/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && id.matches('m[a-z0-9]{4,16}')
+          && request.resource.data.keys().hasOnly(['job', 'date', 'client', 'tpl', 'text', 'to', 'at'])
+          && str(request.resource.data.text, 1000) && optStr(request.resource.data, 'to', 20) && optStr(request.resource.data, 'job', 200);
+        allow update: if false;
       }
       match /private/{docId} {
         allow read: if isOwner(uid);

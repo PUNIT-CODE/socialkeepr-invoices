@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-9Pd/ChqfVXoXRjzHNEH7/EduscuyoJgvIVZciudJ3JU=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-pBEdbq7xMCsuub2vtTclBieAWrSslrjpGO88XLVKteE=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Make SocialKeepr PhotoBooth tax invoices as PDFs. Works offline.">
@@ -186,6 +186,22 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 .dialog .box { background: var(--panel); color: var(--fg); border-radius: 14px; padding: 22px; max-width: 440px; width: 100%; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
 .dialog h2 { font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--fg); margin: 0; } .dialog p { margin: 0; font-size: 14px; color: var(--muted); }
 .sel { font: inherit; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; }
+.msjobs { display: flex; flex-direction: column; gap: 12px; }
+.msjob { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.msjob.open { border-color: var(--accent); }
+.mshead { width: 100%; text-align: left; background: none; border: 0; color: var(--fg); padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; cursor: pointer; }
+.mstime { font-family: var(--font-num); font-size: 13px; color: var(--muted); grid-column: 1; } .msname { font-weight: 600; grid-column: 1; } .msvenue { font-size: 13px; color: var(--muted); grid-column: 1; }
+.mshead .pill { grid-column: 2; grid-row: 1 / 4; align-self: center; white-space: nowrap; }
+.msbody { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.msbody textarea, .tplrow textarea, .tplrow input { font: inherit; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 10px; width: 100%; resize: vertical; }
+.tplchips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; } .segbtn { background: var(--field); border: 1px solid var(--line); color: var(--fg); border-radius: 8px; padding: 8px 10px; font-size: 13px; cursor: pointer; } .segbtn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+a.sendbtn { display: inline-block; text-decoration: none; text-align: center; font-weight: 600; background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 13px 18px; max-width: 100%; overflow-wrap: anywhere; }
+a.sendbtn:hover { filter: brightness(1.08); } a.sendbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tpllist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; } .tpllist li { display: flex; flex-direction: column; gap: 2px; font-size: 14px; } .tpllist span { color: var(--muted); }
+.tplrow { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr) auto; gap: 8px; align-items: start; }
+@media (max-width: 640px) { .tplrow { grid-template-columns: minmax(0, 1fr) auto; } .tplrow textarea { grid-column: 1 / 2; } }
+code { font-family: var(--font-num); font-size: 12px; background: var(--field); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
 .syncline { display: flex; gap: 8px; align-items: center; margin: 0; }
 .sharepanel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); display: flex; flex-direction: column; gap: 10px; }
 .sharepanel p { margin: 0; font-size: 14px; }
@@ -258,6 +274,7 @@ button.danger:hover { border-color: var(--warn); }
     <nav class="nav" aria-label="Main">
       <button class="navbtn new" type="button" id="navNew">+ New invoice</button>
       <button class="navbtn" type="button" id="navDash">Dashboard</button>
+      <button class="navbtn" type="button" id="navMsg">Client messages</button>
       <button class="navbtn" type="button" id="navRun">Run sheet</button>
       <button class="navbtn" type="button" id="navImport">Import old invoices</button>
     </nav>
@@ -337,7 +354,8 @@ const safePhoto = p => typeof p === 'string' && p.startsWith('data:image/jpeg;ba
 function cleanSettings(d) {
   const m = {}; const src = d && typeof d.merchants === 'object' && d.merchants ? d.merchants : {};
   Object.keys(src).slice(0, 500).forEach(k => { if (/^[a-z ]{1,60}$/.test(k)) m[k] = S(src[k], 40); });
-  return { merchants: m, sheetLink: S(d && d.sheetLink, 300) };
+  const tp = Array.isArray(d && d.templates) ? d.templates.slice(0, 20).filter(x => x && typeof x === 'object').map(x => ({ id: S(x.id, 20), label: S(x.label, 40), text: S(x.text, 600) })) : [];
+  return { merchants: m, sheetLink: S(d && d.sheetLink, 300), templates: tp };
 }
 function tooBig(f, max = LIMITS.uploadBytes) { return !f || f.size > max; }
 
@@ -411,6 +429,7 @@ $('navDash').addEventListener('click', () => go({ name: 'dash' }));
 $('navImport').addEventListener('click', () => go({ name: 'import' }));
 $('navRun').addEventListener('click', () => go({ name: 'runsheet' }));
 $('acctBtn').addEventListener('click', () => go({ name: 'account' }));
+$('navMsg').addEventListener('click', () => go({ name: 'messages' }));
 const weekOfInv = inv => inv.weekStart || invoiceWeekStart(inv.date);
 function invoiceForWeek(ws, exceptNo) { return sorted().find(i => weekOfInv(i) === ws && Number(i.no) !== Number(exceptNo)); }
 function startNewInvoice() { draft = freshDraft(); store.set('draft', draft); go({ name: 'edit' }); }
@@ -462,6 +481,7 @@ function render() { renderSide(); const v = $('view');
   else if (route.name === 'import') renderImport();
   else if (route.name === 'runsheet') renderRunSheet();
   else if (route.name === 'account') renderAccount();
+  else if (route.name === 'messages') renderMessages();
 }
 
 function renderSide() {
@@ -473,6 +493,7 @@ function renderSide() {
   $('navDash').setAttribute('aria-current', route.name === 'dash' ? 'page' : 'false');
   $('navImport').setAttribute('aria-current', route.name === 'import' ? 'page' : 'false');
   $('navRun').setAttribute('aria-current', route.name === 'runsheet' ? 'page' : 'false');
+  $('navMsg').setAttribute('aria-current', route.name === 'messages' ? 'page' : 'false');
   const list = $('invList'); const all = sorted();
   $('listCount').textContent = 'Invoices' + (loaded ? ' (' + all.length + ')' : '');
   if (!loaded) { list.innerHTML = '<li class="sidenote">Loading your invoices…</li>'; }
@@ -1402,7 +1423,7 @@ const cloud = {
       if (first) { first = false; this.migrate(); }
       if (route.name === 'edit') renderSide(); else render();
     }, () => { this.status = 'error'; renderSide(); }));
-    this.unsub.push(F.onSnapshot(window.SKFB.doc(this.fs, 'users', u.uid), s => { const m = s.data() || {}; this.member = Object.assign({}, m, { name: S(m.name, 40), photo: safePhoto(m.photo) }); renderSide(); if (route.name === 'account' && !$('pfName')) render(); }));
+    this.unsub.push(F.onSnapshot(window.SKFB.doc(this.fs, 'users', u.uid), s => { const m = s.data() || {}; this.member = Object.assign({}, m, { name: S(m.name, 40), photo: safePhoto(m.photo), phone: S(m.phone, 20) }); renderSide(); if (route.name === 'account' && !$('pfName')) render(); }));
     this.unsub.push(F.onSnapshot(this.ref('private', 'profile'), s => { const d = s.data(); if (d) { profile.name = S(d.name, 80); profile.tfn = S(d.tfn, 20); if (route.name !== 'edit') render(); } }));
     this.unsub.push(F.onSnapshot(this.ref('private', 'settings'), s => { const d = s.data(); if (d) { settings = cleanSettings(d); if (d.sheetLink != null) sheetCfg.link = settings.sheetLink; } }));
   },
@@ -1429,8 +1450,8 @@ const cloud = {
   async getReceipt(id) { const s = await window.SKFB.getDoc(window.SKFB.doc(this.col('receipts'), id)); return s.exists() ? cleanReceipt(s.data()) : null; },
   delReceipt(id) { return window.SKFB.deleteDoc(window.SKFB.doc(this.col('receipts'), id)); },
   saveProfile(p) { return window.SKFB.setDoc(this.ref('private', 'profile'), { name: S(p.name, 80), tfn: S(p.tfn, 20) }); },
-  saveMember(d) { d = Object.assign({}, d); if ('name' in d) d.name = S(d.name, 40); if ('photo' in d) d.photo = safePhoto(d.photo); return window.SKFB.updateDoc(window.SKFB.doc(this.fs, 'users', this.user.uid), Object.assign({ updatedAt: new Date().toISOString() }, d)); },
-  saveSettings() { return window.SKFB.setDoc(this.ref('private', 'settings'), cleanSettings({ merchants: settings.merchants, sheetLink: sheetCfg.link })).catch(() => {}); },
+  saveMember(d) { d = Object.assign({}, d); if ('name' in d) d.name = S(d.name, 40); if ('phone' in d) d.phone = S(d.phone, 20); if ('photo' in d) d.photo = safePhoto(d.photo); return window.SKFB.updateDoc(window.SKFB.doc(this.fs, 'users', this.user.uid), Object.assign({ updatedAt: new Date().toISOString() }, d)); },
+  saveSettings() { return window.SKFB.setDoc(this.ref('private', 'settings'), cleanSettings({ merchants: settings.merchants, sheetLink: sheetCfg.link, templates: settings.templates })).catch(() => {}); },
   async signOutAll() {
     const F = window.SKFB;
     const saved = await Promise.race([F.waitForPendingWrites(this.fs).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), 6000))]);
@@ -1505,6 +1526,142 @@ function squarePhoto(file, side) {
     im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('bad image')); }; im.src = url; });
 }
 function syncText() { return ({ synced: 'All changes saved to your account.', syncing: 'Saving changes…', offline: 'Offline. Changes will upload when you are back online.', error: 'Could not reach your account. Changes are kept on this device for now.' })[cloud.status] || ''; }
+
+/* ---------- client messages: ready-made texts sent from the worker's own phone ----------
+   The app fills in the client's number and the message, then hands over to the phone's Messages app
+   (sms: link). The worker taps Send, so it always goes from their own number, as iMessage when possible. */
+const DEFAULT_TEMPLATES = [
+  { id: 'confirm', label: 'Confirm set-up time', text: "Hi {name}, it's {me} from Social Keepr Photo Booth. Just confirming I'll arrive at {venue} at around {setup} to set up the photo booth. Let me know if anything changes." },
+  { id: 'onway', label: 'On my way', text: "Hi {name}, it's {me} from Social Keepr. I'm on my way to {venue} and should be there in about {mins} minutes. See you soon!" },
+  { id: 'late', label: 'Running late', text: "Hi {name}, it's {me} from Social Keepr. Sorry, I've been held up on the road and will be about {mins} minutes late to {venue}. I'll keep you updated. Thanks for your patience!" },
+  { id: 'arrived', label: 'Arrived, setting up', text: "Hi {name}, I've arrived at {venue} and I'm setting up the photo booth now. It will be ready for your guests by {start}." },
+  { id: 'checkin', label: 'Checking in', text: "Hi {name}, how's the photo booth going? Hope everyone's having fun! If you need anything, just text or call me on {phone}." },
+  { id: 'thanks', label: 'Thank you', text: "Hi {name}, thanks so much for having Social Keepr at your event! We hope you and your guests loved the photo booth." }
+];
+const PLACEHOLDERS = [['{name}', "client's first name"], ['{venue}', 'venue'], ['{setup}', 'set-up time'], ['{start}', 'booth start time'], ['{time}', 'booth hours'], ['{mins}', 'minutes you pick'], ['{me}', 'your name'], ['{phone}', 'your phone number']];
+function templates() { const t = Array.isArray(settings.templates) && settings.templates.length ? settings.templates : DEFAULT_TEMPLATES; return t.slice(0, 20).map(x => ({ id: S(x.id, 20) || 't' + Math.random().toString(36).slice(2, 7), label: S(x.label, 40), text: S(x.text, 600) })); }
+function myInfo() { const mb = (cloud && cloud.member) || {}; const loc = store.get('me', {}); return { name: S(mb.name || loc.name || (profile.name || '').split(' ')[0], 40), phone: S(mb.phone || loc.phone, 20) }; }
+
+// Australian numbers: the run sheet drops leading zeros ("449805488") or uses 61…; turn them into +61…
+function cleanPhone(raw) {
+  const s = String(raw || '').replace(/[‎‏‪-‮]/g, ''); const plus = /^\s*\+/.test(s); let d = s.replace(/\D/g, '');
+  if (!d) return null;
+  if (d.startsWith('61') && d.length === 11) return '+' + d;
+  if (d.length === 10 && d[0] === '0') return '+61' + d.slice(1);
+  if (d.length === 9 && /^[2-478]/.test(d)) return '+61' + d;
+  if (plus && d.length >= 8) return '+' + d;
+  return d.length >= 8 && d.length <= 15 ? d : null;
+}
+function showPhone(p) { if (!p) return ''; if (/^\+614\d{8}$/.test(p)) return '0' + p.slice(3, 6) + ' ' + p.slice(6, 9) + ' ' + p.slice(9); if (/^\+61[2378]\d{8}$/.test(p)) return '(0' + p[3] + ') ' + p.slice(4, 8) + ' ' + p.slice(8); return p; }
+function contactsFor(job) {
+  const out = []; const main = cleanPhone(job.phone);
+  if (main) out.push({ who: firstName(job.client) || 'Client', num: main, label: 'Client' });
+  const c2 = String(job.contact2 || '').replace(/[‎‏‪-‮]/g, '');
+  const m = c2.match(/(\+?\d[\d\s]{7,15}\d)/);
+  if (m) { const n = cleanPhone(m[1]); const who = c2.slice(0, m.index).replace(/[-–:,\s]+$/, '').trim(); if (n && n !== main) out.push({ who: firstName(who) || 'Contact', num: n, label: 'Other contact' + (who ? ' (' + who.split(/\s+/)[0] + ')' : '') }); }
+  return out;
+}
+const firstName = s => { const w = String(s || '').replace(/\s+/g, ' ').trim().split(' ')[0] || ''; return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ''; };
+function fillTemplate(text, job, contact, mins) {
+  const me = myInfo(); const start = (String(job.booth || '').match(/\d{1,2}(?::\d{2})?\s*[AaPp][Mm]/) || [''])[0];
+  const venue = (job.venue || job.suburb || 'the venue').replace(/\s+/g, ' ').trim();
+  const map = { '{name}': contact ? contact.who : firstName(job.client), '{venue}': venue, '{setup}': job.setup || 'the agreed time', '{start}': start || 'the start time', '{time}': job.booth || '', '{mins}': String(mins), '{me}': me.name || 'your photo booth technician', '{phone}': me.phone ? showPhone(cleanPhone(me.phone) || me.phone) : 'this number' };
+  return text.replace(/\{(name|venue|setup|start|time|mins|me|phone)\}/g, k => map[k]);
+}
+const isApple = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+const smsHref = (num, body) => 'sms:' + num + (isApple ? '&' : '?') + 'body=' + encodeURIComponent(body);
+const jobKey = j => j.date + '|' + shopKey(j.client) + '|' + shopKey(j.venue || j.suburb);
+
+// what was sent (kept in your account when signed in, otherwise on this device; 60 days)
+let msgLog = store.get('msgLog', []).filter(m => Date.now() - (m.at || 0) < 60 * 864e5);
+async function logMessage(entry) {
+  entry = { job: S(entry.job, 200), date: S(entry.date, 10), client: S(entry.client, 60), tpl: S(entry.tpl, 40), text: S(entry.text, 1000), to: S(entry.to, 20), at: Date.now() };
+  msgLog.push(entry); store.set('msgLog', msgLog.slice(-500));
+  if (mode === 'cloud') { try { await window.SKFB.setDoc(window.SKFB.doc(cloud.col('messages'), 'm' + entry.at.toString(36)), entry); } catch (e) {} }
+}
+
+let ms = { date: null, data: null, loading: false, open: null, tpl: 'onway', mins: 30, contact: 0, text: '', edited: false, editing: false };
+function renderMessages() {
+  if (!ms.date) ms.date = todayISO();
+  const d = dateOf(ms.date); const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  const data = ms.data && ms.data.key === key ? ms.data : null;
+  const jobs = data ? (data.jobs || []).filter(j => j.date === ms.date) : [];
+  const prob = data ? sheetProblem([data]) : '';
+  const me = myInfo(); const tpls = templates();
+  $('view').innerHTML =
+    '<div class="pagehead"><div><h1>Client messages</h1><p>Pick a job, pick a message, tap Send. It opens Messages on this phone so the text comes from your own number.</p></div>' +
+    '<div class="actions"><button class="secondary" type="button" id="msPrev" aria-label="Previous day">‹</button><b class="monthname">' + esc(ms.date === todayISO() ? 'Today, ' : '') + esc(dayLabel(ms.date)) + '</b><button class="secondary" type="button" id="msNext" aria-label="Next day">›</button>' + (ms.date !== todayISO() ? '<button class="secondary" type="button" id="msToday">Today</button>' : '') + '</div></div>' +
+    (!me.name || !me.phone ? '<p class="notice">Add your name and phone number below so messages can say who they are from and how to reach you.</p>' : '') +
+    (prob ? '<p class="notice warn">' + esc(prob) + (/link/i.test(prob) ? ' <button class="secondary" type="button" id="msGoRun">Open Run sheet</button>' : '') + '</p>' : '') +
+    (ms.loading && !data ? '<p class="empty">Loading the run sheet…</p>' : !jobs.length ? '<section class="card"><p class="empty">' + (data && !prob ? 'No jobs on the run sheet for ' + esc(dayLabel(ms.date)) + '.' : 'Nothing to show yet.') + '</p></section>' :
+      '<div class="msjobs">' + jobs.map((j, k) => msJobCard(j, k, tpls)).join('') + '</div>') +
+    '<section class="card"><h2>Your details for messages</h2><div class="fields"><label class="f">Your name in messages<input id="meName" type="text" maxlength="40" value="' + esc(me.name) + '" placeholder="e.g. Punit"></label>' +
+      '<label class="f">Your phone number<input id="mePhone" type="tel" maxlength="20" autocomplete="tel" value="' + esc(me.phone) + '" placeholder="e.g. 0412 345 678"></label></div>' +
+      '<div class="actions" style="margin-top:10px"><button class="secondary" type="button" id="meSave">Save</button></div><p class="hint">Used for {me} and {phone} in the messages. Texts are always sent from the phone you tap Send on.</p><p class="status" id="meMsg" role="status"></p></section>' +
+    '<section class="card"><h2>Message templates</h2>' + (ms.editing ? tplEditor(tpls) : '<ul class="tpllist">' + tpls.map(t => '<li><b>' + esc(t.label) + '</b><span>' + esc(t.text) + '</span></li>').join('') + '</ul><div class="actions" style="margin-top:10px"><button class="secondary" type="button" id="tplEdit">Edit templates</button></div>') + '</section>';
+  wireMessages(jobs, tpls);
+  if (!data && !ms.loading) msFetch();
+}
+function msJobCard(j, k, tpls) {
+  const open = ms.open === jobKey(j); const cs = contactsFor(j); const sent = msgLog.filter(m => m.job === jobKey(j));
+  let body = '';
+  if (open) {
+    const c = cs[Math.min(ms.contact, cs.length - 1)]; const t = tpls.find(x => x.id === ms.tpl) || tpls[0];
+    if (!ms.edited) ms.text = fillTemplate(t.text, j, c, ms.mins);
+    body = '<div class="msbody">' +
+      (cs.length > 1 ? '<div class="seg" role="group" aria-label="Send to">' + cs.map((x, i) => '<button type="button" class="segbtn" data-ct="' + i + '" aria-pressed="' + (i === ms.contact) + '">' + esc(x.label) + ' · ' + esc(showPhone(x.num)) + '</button>').join('') + '</div>' : '') +
+      '<div class="tplchips">' + tpls.map(x => '<button type="button" class="wchip" data-tpl="' + esc(x.id) + '" aria-pressed="' + (x.id === t.id) + '">' + esc(x.label) + '</button>').join('') + '</div>' +
+      (/\{mins\}/.test(t.text) ? '<div class="tplchips"><span class="addlabel">Minutes:</span>' + [10, 15, 20, 30, 45, 60].map(m => '<button type="button" class="wchip" data-mins="' + m + '" aria-pressed="' + (m === ms.mins) + '">' + m + '</button>').join('') + '</div>' : '') +
+      '<label class="f">Message (you can change it)<textarea id="msText" rows="4" maxlength="1000">' + esc(ms.text) + '</textarea></label>' +
+      (c ? '<div class="actions"><a class="primary sendbtn" id="msSend" href="' + esc(smsHref(c.num, ms.text)) + '">Send to ' + esc(c.who) + ' · ' + esc(showPhone(c.num)) + '</a>' + (ms.edited ? '<button class="linkish" type="button" id="msReset">Undo my changes</button>' : '') + '</div><p class="hint">Opens Messages with this text ready. Tap Send there.</p>'
+         : '<p class="status bad">No phone number for this client on the run sheet.</p>') + '</div>';
+  }
+  return '<article class="msjob' + (open ? ' open' : '') + '"><button class="mshead" type="button" data-job="' + esc(jobKey(j)) + '" aria-expanded="' + open + '">' +
+    '<span class="mstime">' + esc((j.booth || 'Time not set').replace(/\s+/g, ' ')) + '</span><span class="msname">' + esc((j.client || 'Client').replace(/\s+/g, ' ')) + (j.event ? ' · ' + esc(j.event) : '') + '</span>' +
+    '<span class="msvenue">' + esc(j.venue || j.suburb || '') + (j.setup ? ' · set up ' + esc(j.setup) : '') + '</span>' +
+    (sent.length ? '<span class="pill paid">' + sent.length + ' sent · last: ' + esc(sent[sent.length - 1].tpl) + '</span>' : '<span class="pill neutral">No messages yet</span>') + '</button>' + body + '</article>';
+}
+function tplEditor(tpls) {
+  return '<p class="hint" style="margin-top:0">Words in curly brackets are filled in for each client: ' + PLACEHOLDERS.map(p => '<code>' + p[0] + '</code> ' + esc(p[1])).join(', ') + '.</p>' +
+    '<div class="stack" id="tplRows">' + tpls.map((t, i) => '<div class="tplrow"><input type="text" maxlength="40" data-tl="' + i + '" value="' + esc(t.label) + '" aria-label="Template name"><textarea rows="3" maxlength="600" data-tt="' + i + '" aria-label="Template text">' + esc(t.text) + '</textarea><button class="iconbtn" type="button" data-tdel="' + i + '" aria-label="Delete template">×</button></div>').join('') + '</div>' +
+    '<div class="actions" style="margin-top:10px"><button class="secondary" type="button" id="tplAdd">+ Add a template</button><button class="primary" type="button" id="tplSave">Save templates</button><button class="secondary" type="button" id="tplCancel">Cancel</button><button class="linkish" type="button" id="tplReset">Go back to the standard ones</button></div>';
+}
+function wireMessages(jobs, tpls) {
+  const shift = n => { ms.date = addDays(ms.date, n); ms.open = null; const d = dateOf(ms.date); const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); if (!ms.data || ms.data.key !== key) { ms.data = null; } renderMessages(); };
+  $('msPrev').addEventListener('click', () => shift(-1)); $('msNext').addEventListener('click', () => shift(1));
+  if ($('msToday')) $('msToday').addEventListener('click', () => { ms.date = null; ms.data = null; ms.open = null; renderMessages(); });
+  if ($('msGoRun')) $('msGoRun').addEventListener('click', () => go({ name: 'runsheet' }));
+  document.querySelectorAll('.mshead').forEach(b => b.addEventListener('click', () => { ms.open = ms.open === b.dataset.job ? null : b.dataset.job; ms.contact = 0; ms.edited = false; renderMessages(); }));
+  document.querySelectorAll('[data-tpl]').forEach(b => b.addEventListener('click', () => { ms.tpl = b.dataset.tpl; ms.edited = false; renderMessages(); }));
+  document.querySelectorAll('[data-mins]').forEach(b => b.addEventListener('click', () => { ms.mins = +b.dataset.mins; ms.edited = false; renderMessages(); }));
+  document.querySelectorAll('[data-ct]').forEach(b => b.addEventListener('click', () => { ms.contact = +b.dataset.ct; ms.edited = false; renderMessages(); }));
+  const ta = $('msText');
+  if (ta) ta.addEventListener('input', () => { ms.text = ta.value; ms.edited = true; const a = $('msSend'); const job = jobs.find(j => jobKey(j) === ms.open); const c = job && contactsFor(job)[ms.contact]; if (a && c) a.href = smsHref(c.num, ms.text); });
+  if ($('msReset')) $('msReset').addEventListener('click', () => { ms.edited = false; renderMessages(); });
+  const send = $('msSend');
+  if (send) send.addEventListener('click', () => { const job = jobs.find(j => jobKey(j) === ms.open); const c = contactsFor(job)[ms.contact]; const t = tpls.find(x => x.id === ms.tpl) || tpls[0];
+    logMessage({ job: jobKey(job), date: job.date, client: c.who, tpl: t.label, text: ms.text, to: c.num });
+    setTimeout(() => { ms.edited = false; renderMessages(); }, 600); });
+  $('meSave').addEventListener('click', async () => { const name = $('meName').value.trim(), phone = $('mePhone').value.trim(); const m = $('meMsg');
+    if (phone && !cleanPhone(phone)) { m.className = 'status bad'; m.textContent = 'That phone number does not look right.'; return; }
+    store.set('me', { name: S(name, 40), phone: S(phone, 20) });
+    if (mode === 'cloud') { try { await cloud.saveMember({ name: name || (cloud.member && cloud.member.name) || '', phone: S(phone, 20) }); } catch (e) { m.className = 'status bad'; m.textContent = 'Saved on this device, but could not reach your account.'; return; } }
+    m.className = 'status ok'; m.textContent = 'Saved.'; setTimeout(renderMessages, 500); });
+  if ($('tplEdit')) $('tplEdit').addEventListener('click', () => { ms.editing = true; renderMessages(); });
+  if (ms.editing) {
+    const read = () => Array.from(document.querySelectorAll('[data-tl]')).map((el, i) => ({ id: (tpls[i] && tpls[i].id) || 't' + Date.now().toString(36) + i, label: el.value.trim() || 'Message', text: document.querySelector('[data-tt="' + i + '"]').value.trim() })).filter(t => t.text);
+    $('tplAdd').addEventListener('click', () => { settings.templates = read().concat([{ id: 't' + Date.now().toString(36), label: 'New message', text: 'Hi {name}, ' }]); renderMessages(); });
+    document.querySelectorAll('[data-tdel]').forEach(b => b.addEventListener('click', () => { const t = read(); t.splice(+b.dataset.tdel, 1); settings.templates = t; renderMessages(); }));
+    $('tplSave').addEventListener('click', () => { settings.templates = read(); saveSettings(); ms.editing = false; renderMessages(); });
+    $('tplCancel').addEventListener('click', () => { settings = Object.assign({}, settings, { templates: store.get('settings', {}).templates }); ms.editing = false; renderMessages(); });
+    $('tplReset').addEventListener('click', () => { settings.templates = []; saveSettings(); ms.editing = false; renderMessages(); });
+  }
+}
+async function msFetch() {
+  const d = dateOf(ms.date); ms.loading = true; renderMessages();
+  const r = await loadMonth(d.getFullYear(), d.getMonth(), false);
+  ms.loading = false; ms.data = r; if (route.name === 'messages') renderMessages();
+}
 
 /* ---------- password-protected share links ----------
    The invoice is encrypted in the browser (AES-GCM, key from the password with PBKDF2) and the result
