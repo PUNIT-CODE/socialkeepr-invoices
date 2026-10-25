@@ -2,20 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-pBEdbq7xMCsuub2vtTclBieAWrSslrjpGO88XLVKteE=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-mUITN/vx3932U48WWCMNqkatzcMGW/WDekg4XehmE5o=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Make SocialKeepr PhotoBooth tax invoices as PDFs. Works offline.">
+<meta name="description" content="Boothkeeper: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
 <meta name="theme-color" content="#b0127a">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="SK Invoices">
+<meta name="apple-mobile-web-app-title" content="Boothkeeper">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
 </head>
 <body>
-<title>SocialKeepr Invoice Maker</title>
+<title>Boothkeeper</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* Layout: invoice list in a left sidebar; the main pane switches between dashboard, editor and a saved invoice. */
@@ -269,7 +269,7 @@ button.danger:hover { border-color: var(--warn); }
 
 <div class="app">
   <aside class="side collapsed" id="side">
-    <div class="brand"><img id="brandLogo" alt=""><div><b>SocialKeepr Invoices</b><span>Photo Booth Event Services</span></div></div>
+    <div class="brand"><img id="brandLogo" alt=""><div><b>Boothkeeper</b><span>Jobs, clients and invoices for Social Keepr</span></div></div>
     <button class="acct" type="button" id="acctBtn"></button>
     <nav class="nav" aria-label="Main">
       <button class="navbtn new" type="button" id="navNew">+ New invoice</button>
@@ -1230,7 +1230,7 @@ let flashDash = null;
 $('bExport').addEventListener('click', async () => {
   const msg = $('backupMsg');
   if (!invoices.length) { msg.textContent = 'There are no invoices to back up yet.'; return; }
-  const name = 'SocialKeepr invoices backup ' + fmtDate(todayISO()) + '.json';
+  const name = 'Boothkeeper backup ' + fmtDate(todayISO()) + '.json';
   const data = JSON.stringify({ app: 'socialkeepr-invoices', version: 1, exportedAt: new Date().toISOString(), invoices }, null, 2);
   try {
     if (downloads) { await downloads.save({ filename: name, data }); }

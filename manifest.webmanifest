@@ -1,6 +1,6 @@
 {
-  "name": "SocialKeepr Invoices",
-  "short_name": "SK Invoices",
+  "name": "Boothkeeper",
+  "short_name": "Boothkeeper",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
