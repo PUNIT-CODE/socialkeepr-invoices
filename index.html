@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-YixSwHucqHzv1hxrOM06nZIk81pLntMY+xTtjFkVmZA=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-dU7fhKZMy6aiQJ3jfEYBIaiqD/gj4QDF6qdhOg/U7JE=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -928,7 +928,9 @@ function jobsFromGrid(grid) {
 }
 const sheetCfg = Object.assign({ link: (typeof DEFAULT_SHEET === 'string' ? DEFAULT_SHEET : '') }, store.get('sheet', {}));
 const sheetIdOf = link => { const m = String(link || '').match(/\/d\/([a-zA-Z0-9_-]{20,})/) || String(link || '').match(/^([a-zA-Z0-9_-]{30,})$/); return m ? m[1] : ''; };
-const tabNames = (y, m) => { const ab = MONTHS[m].toUpperCase(); return Array.from(new Set([ab, MONTH_FULL[m].toUpperCase(), MONTHS[m], MONTH_FULL[m], m === 8 ? 'SEPT' : ab, ab + ' ' + y, MONTH_FULL[m] + ' ' + y])); };
+// Month tabs are named like OCT26, NOV26 (month + two-digit year); older styles are tried after that.
+const tabNames = (y, m) => { const ab = MONTHS[m].toUpperCase(), yy = String(y).slice(-2), full = MONTH_FULL[m].toUpperCase(), alt = m === 8 ? 'SEPT' : ab;
+  return Array.from(new Set([ab + yy, alt + yy, ab + ' ' + yy, ab + '-' + yy, MONTHS[m] + yy, full + yy, ab + y, ab + ' ' + y, full + ' ' + y, MONTH_FULL[m] + ' ' + y, ab, alt, full, MONTHS[m], MONTH_FULL[m]])); };
 const canReachGoogle = !window.claude; // the private Claude version cannot load Google pages
 let gvizN = 0;
 function gvizGrid(id, tab) {
@@ -956,18 +958,21 @@ function gvizGrid(id, tab) {
 // Jobs for one month: from Google (cached on this device for offline use) or from an uploaded copy.
 const sheetCache = store.get('sheetCache', {}); // key "2026-10" -> { at, jobs }
 function saveSheetCache() { store.set('sheetCache', sheetCache); }
+const tabMissAt = {}; // months whose tab was not found, so background checks do not keep asking
 async function loadMonth(y, m, force) {
   const key = y + '-' + String(m + 1).padStart(2, '0');
   const cached = sheetCache[key];
   const id = sheetIdOf(sheetCfg.link);
   if (!id || !canReachGoogle) { if (cached) return Object.assign({ key, offline: !canReachGoogle ? 'upload' : 'nolink' }, cached); return { key, jobs: [], missing: !id ? 'nolink' : 'private' }; }
   if (cached && !force && Date.now() - cached.at < 60 * 1000) return Object.assign({ key }, cached);
+  if (force === 'bg' && !cached && tabMissAt[key] && Date.now() - tabMissAt[key] < 10 * 60 * 1000) return { key, jobs: [], notab: true };
   try {
     for (const tab of tabNames(y, m)) {
       const jobs = jobsFromGrid(await gvizGrid(id, tab));
       const inMonth = jobs.filter(j => j.date.slice(0, 7) === key);
       if (inMonth.length && inMonth.length >= jobs.length / 2) { if (cached) recordChanges(cached.jobs, inMonth); sheetCache[key] = { at: Date.now(), jobs: inMonth, src: 'Google Sheet, tab ' + tab }; saveSheetCache(); return Object.assign({ key }, sheetCache[key]); }
     }
+    tabMissAt[key] = Date.now();
     return Object.assign({ key, jobs: [], notab: true }, cached ? { jobs: cached.jobs, at: cached.at, src: cached.src } : {});
   } catch (e) {
     if (cached) return Object.assign({ key, stale: true }, cached);
@@ -986,7 +991,7 @@ function sheetProblem(res) {
   if (!r) return '';
   if (r.missing === 'nolink') return 'Add the run sheet link on the Run sheet page first.';
   if (r.missing === 'private') return 'This private Claude version cannot open Google Sheets. Use the website, or upload the sheet on the Run sheet page.';
-  if (r.notab) return 'Could not find a ' + MONTHS[+r.key.slice(5) - 1].toUpperCase() + ' tab in the sheet.';
+  if (r.notab) return 'Could not find a ' + MONTHS[+r.key.slice(5) - 1].toUpperCase() + r.key.slice(2, 4) + ' tab in the run sheet (or it has no jobs yet).';
   if (r.stale) return 'Could not reach the sheet, so this uses the copy saved ' + ago(r.at) + '.';
   if (r.error === 'blocked' || r.error === 'timeout') return 'Could not open the sheet. Check your internet, and that the sheet is shared as "Anyone with the link can view".';
   return 'The sheet could not be read (' + r.error + ').';
@@ -2094,7 +2099,7 @@ async function syncSheet() {
     const now = new Date(); const months = [[now.getFullYear(), now.getMonth()], [now.getFullYear(), now.getMonth() + 1]];
     if (now.getDate() <= 10) months.unshift([now.getFullYear(), now.getMonth() - 1]);
     const keys = [];
-    for (const [y0, m0] of months) { const d = new Date(y0, m0, 1); const r = await loadMonth(d.getFullYear(), d.getMonth(), true); if (r && !r.error) keys.push(r.key); }
+    for (const [y0, m0] of months) { const d = new Date(y0, m0, 1); const r = await loadMonth(d.getFullYear(), d.getMonth(), 'bg'); if (r && !r.error && !r.notab) keys.push(r.key); }
     lastSheetSync = Date.now();
     // point the open pages at the fresh copy
     [rs, ms, rt].forEach(st => { if (st.data && keys.includes(st.data.key) && sheetCache[st.data.key]) st.data = Object.assign({ key: st.data.key }, sheetCache[st.data.key]); });
