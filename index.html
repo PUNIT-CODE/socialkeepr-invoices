@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-dU7fhKZMy6aiQJ3jfEYBIaiqD/gj4QDF6qdhOg/U7JE=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-quDgxhgCKGerLA/jWCeLFP4iwtlY3TsbLGzNPokvPeE=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -232,6 +232,8 @@ a.navlink { display: inline-block; text-decoration: none; background: var(--pane
 .msbadge { grid-column: 1; margin-top: 4px; }
 .toast { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 16px); z-index: 70; max-width: min(420px, calc(100vw - 32px)); background: var(--panel); color: var(--fg); border: 1px solid var(--accent); border-radius: 12px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.18); display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 .toast b { font-size: 15px; } .toast .actions { margin-top: 6px; }
+.vhours { font-size: 13px; color: var(--muted); } .vhedit { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; padding: 10px; border: 1px dashed var(--line); border-radius: 8px; } .vhedit .f { flex: 0 1 140px; }
+.job .vh { color: var(--fg); }
 .syncline { display: flex; gap: 8px; align-items: center; margin: 0; }
 .sharepanel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); display: flex; flex-direction: column; gap: 10px; }
 .sharepanel p { margin: 0; font-size: 14px; }
@@ -388,7 +390,9 @@ function cleanSettings(d) {
   const tp = Array.isArray(d && d.templates) ? d.templates.slice(0, 20).filter(x => x && typeof x === 'object').map(x => ({ id: S(x.id, 20), label: S(x.label, 40), text: S(x.text, 600) })) : [];
   const rs = d && d.route && typeof d.route === 'object' ? d.route : {}; const num = (v, a, b, x) => { v = parseInt(v, 10); return isFinite(v) ? Math.min(b, Math.max(a, v)) : x; };
   const route = { homes: (Array.isArray(rs.homes) ? rs.homes : []).slice(0, 6).filter(h => h && typeof h === 'object').map(h => ({ label: S(h.label, 40), addr: S(h.addr, 200) })), setupMins: num(rs.setupMins, 5, 240, 45), packMins: num(rs.packMins, 5, 240, 30), bufferMins: num(rs.bufferMins, 0, 120, 15) };
-  return { merchants: m, sheetLink: S(d && d.sheetLink, 300), templates: tp, route, mapsKey: /^[A-Za-z0-9_-]{0,60}$/.test(S(d && d.mapsKey, 60)) ? S(d && d.mapsKey, 60) : '' };
+  const vh = {}; const vsrc = d && d.venueHours && typeof d.venueHours === 'object' ? d.venueHours : {};
+  Object.keys(vsrc).slice(0, 300).forEach(k => { if (!/^[a-z |]{1,130}$/.test(k) || typeof vsrc[k] !== 'object' || !vsrc[k]) return; const o = {}; Object.keys(vsrc[k]).forEach(dw => { if (!/^[0-6]$/.test(dw) || !Array.isArray(vsrc[k][dw])) return; o[dw] = vsrc[k][dw].slice(0, 4).filter(x => Array.isArray(x) && x.length === 2).map(x => [num(x[0], 0, 2 * DAY, 0), num(x[1], 0, 2 * DAY, 0)]); }); vh[k] = o; });
+  return { merchants: m, sheetLink: S(d && d.sheetLink, 300), templates: tp, route, venueHours: vh, routeEngine: d && d.routeEngine === 'free' ? 'free' : 'auto', mapsKey: /^[A-Za-z0-9_-]{0,60}$/.test(S(d && d.mapsKey, 60)) ? S(d && d.mapsKey, 60) : '' };
 }
 function tooBig(f, max = LIMITS.uploadBytes) { return !f || f.size > max; }
 
@@ -1044,13 +1048,14 @@ function renderRunSheet() {
   if ($('rsSave')) $('rsSave').addEventListener('click', () => { const v = $('rsLink').value.trim(); if (v && !sheetIdOf(v)) { say('That does not look like a Google Sheets link.', 'bad'); return; } sheetCfg.link = v; store.set('sheet', { link: v }); saveSettings(); rs.msg = { text: v ? 'Link saved.' : 'Link removed.', kind: 'ok' }; fetchRs(true); });
   $('rsFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) uploadSheet(f); });
   if (!data && !rs.loading) fetchRs(false);
+  if (data && rs.week && weeks.includes(rs.week)) ensureHours(shown.slice(0, 15), () => { if (route.name === 'runsheet') renderRunSheet(); });
 }
 function jobCard(j) {
   const att = attendantHours(j);
   const line = (k, v) => v ? '<div><dt>' + k + '</dt><dd>' + esc(v) + '</dd></div>' : '';
   return '<article class="job"><header><b>' + esc(j.booth || 'Time not set') + '</b>' + (j.style ? '<span class="pill neutral">' + esc(j.style) + '</span>' : '') + changeBadge(j) + (att ? '<span class="pill att">Attendant ' + fmtNum(att) + ' hrs</span>' : (j.staffNote ? '<span class="pill neutral">' + esc(j.staffNote) + '</span>' : '')) + '</header>' +
     '<p class="jt">' + esc(j.client || 'Client') + (j.event ? ' · ' + esc(j.event) : '') + '</p>' +
-    '<p class="jv">' + esc([j.venue, j.address || j.suburb].filter(Boolean).join(', ')) + '</p>' +
+    '<p class="jv">' + esc([j.venue, j.address || j.suburb].filter(Boolean).join(', ')) + '</p>' + (hoursFor(j) ? '<p class="jv vh">' + esc(hoursText(hoursFor(j), j.date)) + '</p>' : '') +
     '<dl>' + line('Set up', j.setup) + line('Guests arrive', j.arrival) + line('Pick up', j.pickup) + line('Backdrop', j.backdrop) + line('Phone', j.phone) + line('Contact', j.contact2) + line('Parking', j.parking) + line('Album', j.album) + line('Props', j.props) + line('Notes', [j.floorplan, j.notes].filter(Boolean).join(' · ')) + '</dl></article>';
 }
 async function fetchRs(force) {
@@ -1495,7 +1500,7 @@ const cloud = {
   delReceipt(id) { return window.SKFB.deleteDoc(window.SKFB.doc(this.col('receipts'), id)); },
   saveProfile(p) { return window.SKFB.setDoc(this.ref('private', 'profile'), { name: S(p.name, 80), tfn: S(p.tfn, 20) }); },
   saveMember(d) { d = Object.assign({}, d); if ('name' in d) d.name = S(d.name, 40); if ('phone' in d) d.phone = S(d.phone, 20); if ('photo' in d) d.photo = safePhoto(d.photo); return window.SKFB.updateDoc(window.SKFB.doc(this.fs, 'users', this.user.uid), Object.assign({ updatedAt: new Date().toISOString() }, d)); },
-  saveSettings() { return window.SKFB.setDoc(this.ref('private', 'settings'), cleanSettings({ merchants: settings.merchants, sheetLink: sheetCfg.link, templates: settings.templates, route: settings.route, mapsKey: settings.mapsKey })).catch(() => {}); },
+  saveSettings() { return window.SKFB.setDoc(this.ref('private', 'settings'), cleanSettings({ merchants: settings.merchants, sheetLink: sheetCfg.link, templates: settings.templates, route: settings.route, mapsKey: settings.mapsKey, venueHours: settings.venueHours, routeEngine: settings.routeEngine })).catch(() => {}); },
   async signOutAll() {
     const F = window.SKFB;
     const saved = await Promise.race([F.waitForPendingWrites(this.fs).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), 6000))]);
@@ -1707,6 +1712,133 @@ async function msFetch() {
   ms.loading = false; ms.data = r; if (route.name === 'messages') renderMessages();
 }
 
+/* ---------- free maps (no key needed): OpenStreetMap addresses + OSRM driving times, traffic estimated ----------
+   Used when the Google key is missing or refused. OpenStreetMap asks for at most one address lookup per
+   second, so lookups are queued and remembered on this device. */
+const geoCache = store.get('geo', {});
+let nomQueue = Promise.resolve(), nomLast = 0;
+function nominatim(params) {
+  const run = async () => {
+    const waitMs = Math.max(0, nomLast + 1100 - Date.now()); if (waitMs) await new Promise(r => setTimeout(r, waitMs)); nomLast = Date.now();
+    const u = 'https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=au&addressdetails=0&' + params;
+    const res = await fetch(u, { referrerPolicy: 'strict-origin-when-cross-origin', headers: { 'Accept-Language': 'en-AU' } });
+    if (!res.ok) throw Object.assign(new Error('map lookup ' + res.status), { code: 'osm' });
+    return res.json();
+  };
+  const pr = nomQueue.then(run, run); nomQueue = pr.catch(() => {}); return pr;
+}
+async function geocode(address, hint) {
+  const key = S(address, 200).toLowerCase(); const c = geoCache[key]; if (c && Date.now() - c.at < 90 * 864e5) return c.ll ? c : null;
+  const tries = [address];
+  if (hint && hint.venue && !/^home\b/i.test(hint.venue)) tries.push(hint.venue + ', ' + (hint.suburb || '') + ', Victoria');
+  const pc = String(address).match(/\b(3\d{3})\b/); const sub = hint && hint.suburb; if (sub) tries.push(sub + (pc ? ' ' + pc[1] : '') + ', Victoria');
+  for (const q of tries) {
+    let r = []; try { r = await nominatim('limit=1&q=' + encodeURIComponent(q)); } catch (e) { if (e.code === 'osm') throw e; throw Object.assign(new Error('offline'), { code: 'offline' }); }
+    if (r && r[0]) { const out = { ll: [+r[0].lat, +r[0].lon], q, rough: q !== address, at: Date.now() }; geoCache[key] = out; store.set('geo', geoCache); return out; }
+  }
+  geoCache[key] = { ll: null, at: Date.now() }; store.set('geo', geoCache); return null;
+}
+const OSRM = ['https://router.project-osrm.org', 'https://routing.openstreetmap.de/routed-car'];
+async function osrm(path) {
+  let last;
+  for (const base of OSRM) {
+    try { const res = await fetch(base + path, { referrerPolicy: 'strict-origin-when-cross-origin' }); const d = await res.json(); if (d && d.code === 'Ok') return d; last = new Error((d && d.message) || 'routing ' + res.status); }
+    catch (e) { last = e; }
+  }
+  throw Object.assign(last || new Error('routing'), { code: navigator.onLine ? 'osm' : 'offline' });
+}
+// Melbourne traffic, roughly: how much longer a drive takes than on empty roads, by day and time.
+function trafficFactor(dateIso, mins) {
+  const d = dateOf(dateIso); d.setMinutes(mins); const dow = d.getDay(); const t = d.getHours() * 60 + d.getMinutes();
+  const weekend = dow === 0 || dow === 6;
+  if (!weekend) { if (t >= 420 && t < 570) return 1.45; if (t >= 930 && t < 1110) return 1.5; if (t >= 570 && t < 930) return 1.2; if (t >= 1110 && t < 1260) return 1.12; return 1.03; }
+  if (t >= 600 && t < 1020) return 1.18; if (t >= 1020 && t < 1260) return 1.1; return 1.03;
+}
+const llStr = p => p.ll[1].toFixed(5) + ',' + p.ll[0].toFixed(5);
+async function osmMatrix(points, dateIso, mins) {
+  const d = await osrm('/table/v1/driving/' + points.map(llStr).join(';') + '?annotations=duration,distance');
+  const f = trafficFactor(dateIso, mins);
+  return points.map((p, i) => points.map((q, j) => d.durations[i][j] == null ? null : { mins: d.durations[i][j] / 60 * f, m: (d.distances && d.distances[i][j]) || 0 }));
+}
+async function osmLeg(a, b, dateIso, mins) {
+  const d = await osrm('/route/v1/driving/' + llStr(a) + ';' + llStr(b) + '?overview=full&geometries=polyline');
+  const r = d.routes[0]; const base = r.duration / 60; const f = trafficFactor(dateIso, mins);
+  return { mins: base * f, usual: base, m: r.distance, poly: r.geometry || '', from: a.ll, to: b.ll, traffic: false, est: true };
+}
+
+/* ---------- venue opening hours ---------- */
+const DAYS2 = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const hoursCache = store.get('hours', {});
+const isHomeJob = j => /^home\b/i.test((j.venue || '').trim()) || /^home\b/i.test((j.address || '').trim()) || !(j.venue || '').trim();
+const venueKey = j => shopKey(j.venue) + '|' + shopKey(j.suburb);
+// OpenStreetMap opening_hours, e.g. "Mo-Fr 09:00-17:00; Sa 09:00-12:00; Su off"
+function parseOH(str) {
+  const by = {}; if (!str) return null; const s = String(str).trim();
+  if (/^24\/7$/.test(s)) { for (let d = 0; d < 7; d++) by[d] = [[0, DAY]]; return by; }
+  const tm = x => { const m = x.match(/^(\d{1,2}):(\d{2})$/); return m ? +m[1] * 60 + +m[2] : null; };
+  s.split(';').map(x => x.trim()).filter(Boolean).forEach(rule => {
+    if (/\b(PH|SH)\b/.test(rule)) return;
+    const m = rule.match(/^((?:(?:Mo|Tu|We|Th|Fr|Sa|Su)(?:-(?:Mo|Tu|We|Th|Fr|Sa|Su))?)(?:,(?:Mo|Tu|We|Th|Fr|Sa|Su)(?:-(?:Mo|Tu|We|Th|Fr|Sa|Su))?)*)?\s*(.*)$/);
+    if (!m) return; const days = new Set();
+    if (m[1]) m[1].split(',').forEach(part => { const [a, b] = part.split('-'); let i = DAYS2.indexOf(a); const j = b ? DAYS2.indexOf(b) : i; for (let k = 0; k < 7; k++) { days.add(i); if (i === j) break; i = (i + 1) % 7; } });
+    else for (let d = 0; d < 7; d++) days.add(d);
+    const rest = m[2].trim(); let spans = [];
+    if (!/^(off|closed)$/i.test(rest)) rest.split(',').forEach(x => { const [o, c] = x.trim().split('-'); const a = tm(o || ''), b = tm(c || ''); if (a != null && b != null) spans.push([a, b <= a ? b + DAY : b]); });
+    days.forEach(d => { by[d] = spans; });
+  });
+  return Object.keys(by).length ? by : null;
+}
+function hoursFromGoogle(periods) {
+  const by = {}; (periods || []).forEach(p => { if (!p.open) return; const d = p.open.day; const a = (p.open.hour || 0) * 60 + (p.open.minute || 0);
+    let b = p.close ? (p.close.hour || 0) * 60 + (p.close.minute || 0) + (p.close.day !== d ? DAY : 0) : DAY; (by[d] = by[d] || []).push([a, b]); });
+  for (let d = 0; d < 7; d++) if (!by[d]) by[d] = [];
+  return by;
+}
+let placesBroken = false;
+async function lookupHours(j) {
+  if (isHomeJob(j)) return { home: true };
+  const vk = venueKey(j); const man = (settings.venueHours || {})[vk];
+  const c = hoursCache[vk]; const googleOk = mapsKey() && !placesBroken;
+  if (c && Date.now() - c.at < 30 * 864e5 && (c.src === 'Google' || !googleOk)) return Object.assign({}, c, { manual: man });
+  let found = null;
+  if (googleOk) {
+    try {
+      const res = await fetch('https://places.googleapis.com/v1/places:searchText', { method: 'POST', referrerPolicy: 'strict-origin-when-cross-origin', headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': mapsKey(), 'X-Goog-FieldMask': 'places.displayName,places.regularOpeningHours' }, body: JSON.stringify({ textQuery: j.venue + ', ' + (j.suburb || '') + ' VIC', regionCode: 'AU', pageSize: 1 }) });
+      if (res.ok) { const d = await res.json(); const pl = d.places && d.places[0]; if (pl && pl.regularOpeningHours) found = { src: 'Google', name: pl.displayName && pl.displayName.text, by: hoursFromGoogle(pl.regularOpeningHours.periods) }; }
+      else placesBroken = true;
+    } catch (e) { placesBroken = true; }
+  }
+  if (!found) {
+    try { const r = await nominatim('limit=3&extratags=1&q=' + encodeURIComponent(j.venue + ', ' + (j.suburb || '') + ', Victoria'));
+      const hit = (r || []).find(x => x.extratags && x.extratags.opening_hours); const by = hit && parseOH(hit.extratags.opening_hours);
+      if (by) found = { src: 'OpenStreetMap', name: hit.name, by, raw: S(hit.extratags.opening_hours, 200) }; } catch (e) {}
+  }
+  const out = Object.assign({ at: Date.now() }, found || { none: true });
+  hoursCache[vk] = out; store.set('hours', hoursCache);
+  return Object.assign({}, out, { manual: man });
+}
+// hours for one date: [[open, close], …], [] when closed, or null when unknown
+function hoursOn(h, dateIso) {
+  if (!h || h.home) return null; const dow = dateOf(dateIso).getDay();
+  if (h.manual && h.manual[dow]) return h.manual[dow];
+  return h.by ? (h.by[dow] || []) : null;
+}
+function hoursText(h, dateIso) {
+  if (!h) return 'Looking up venue hours…'; if (h.home) return 'Private home';
+  const day = DOW[dateOf(dateIso).getDay()]; const sp = hoursOn(h, dateIso);
+  if (sp == null) return 'Venue hours on ' + day + ': not listed online';
+  const src = h.manual && h.manual[dateOf(dateIso).getDay()] ? 'entered by you' : 'from ' + h.src;
+  return 'Venue hours on ' + day + ': ' + (sp.length ? sp.map(x => hm(x[0]).replace(' (next day)', '') + '–' + hm(x[1]).replace(' (next day)', '')).join(', ') : 'closed') + ' (' + src + ')';
+}
+const hoursMem = {}; // venueKey -> result for this visit
+async function ensureHours(jobs, onDone) {
+  let changed = false;
+  for (const j of jobs) { const vk = isHomeJob(j) ? 'home' : venueKey(j); if (hoursMem[vk] && !hoursMem[vk].pending) continue; if (vk === 'home') continue;
+    hoursMem[vk] = { pending: true }; try { hoursMem[vk] = await lookupHours(j); } catch (e) { hoursMem[vk] = { none: true }; } changed = true; }
+  if (changed && onDone) onDone();
+}
+const hoursFor = j => isHomeJob(j) ? { home: true } : (hoursMem[venueKey(j)] && !hoursMem[venueKey(j)].pending ? Object.assign({}, hoursMem[venueKey(j)], { manual: (settings.venueHours || {})[venueKey(j)] }) : null);
+
 /* ---------- route planner: the day's jobs in the best order, with live Google traffic ----------
    Each job becomes a set-up stop (between its earliest set-up time and the booth start) and, unless
    the worker stays for the event, a pack-down stop after the booth finishes. Driving times come from
@@ -1746,7 +1878,9 @@ async function gRoutes(path, body, fieldMask) {
   try { res = await fetch('https://routes.googleapis.com/' + path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': fieldMask }, body: JSON.stringify(body), referrerPolicy: 'strict-origin-when-cross-origin' }); }
   catch (e) { throw Object.assign(new Error('offline'), { code: 'offline' }); }
   const data = await res.json().catch(() => null);
-  if (!res.ok) { const msg = data && data.error && data.error.message || ('HTTP ' + res.status); throw Object.assign(new Error(msg), { code: res.status === 403 || res.status === 400 && /key/i.test(msg) ? 'key' : 'api' }); }
+  if (!res.ok) { const er = (data && data.error) || {}; const reason = ((er.details || []).find(x => x.reason) || {}).reason || er.status || '';
+    const why = ({ SERVICE_DISABLED: 'the Routes API is not switched on for this project', API_KEY_SERVICE_BLOCKED: 'the key is not allowed to use the Routes API', API_KEY_HTTP_REFERRER_BLOCKED: 'the key does not allow this website (check the website restriction)', BILLING_DISABLED: 'billing is not switched on for this project', API_KEY_INVALID: 'the key is not valid', PERMISSION_DENIED: 'permission denied' })[reason] || er.message || ('HTTP ' + res.status);
+    throw Object.assign(new Error(why), { code: res.status === 403 || res.status === 401 || /key/i.test(why) ? 'key' : 'api', reason }); }
   return data;
 }
 const wp = p => p.lat != null ? { location: { latLng: { latitude: p.lat, longitude: p.lng } } } : { address: p.address };
@@ -1776,11 +1910,13 @@ function buildStops(plan) {
   plan.jobs.filter(j => j.include).forEach(j => {
     const br = boothRange(j.booth); const start = br ? br.start : null; const end = br ? br.end : null;
     let early = parseClock(j.setup, true); if (early == null || (start != null && early > start)) early = start != null ? start - 180 : 9 * 60;
+    const sp = hoursOn(hoursForPJ(j), plan.date); let vOpen = null, vClose = null;
+    if (sp && sp.length) { vOpen = Math.min(...sp.map(x => x[0])); vClose = Math.max(...sp.map(x => x[1])); if (start == null || vOpen < start) early = Math.max(early, vOpen); }
     const latest = start != null ? start - c.setupMins - c.bufferMins : early + 240;
     let pick = parseClock(j.pickup, true); if (pick != null && end != null && pick < end - 120 && pick + DAY <= end + 360) pick += DAY; // e.g. pick up at 12:00 AM after an 11:30 PM finish
     if (pick == null || end == null || pick < end - 120 || pick > end + 360) pick = end; else if (pick < end) pick = end;
-    stops.push({ id: j.key + '|s', kind: 'setup', job: j.key, label: 'Set up', name: j.client, place: j.venue || j.suburb, addr: j.addr, early, latest, dur: c.setupMins, stayUntil: j.stay ? end : null, packAfterStay: j.stay ? c.packMins : 0, boothStart: start, boothEnd: end });
-    if (!j.stay && end != null) stops.push({ id: j.key + '|p', kind: 'pack', job: j.key, label: 'Pack down', name: j.client, place: j.venue || j.suburb, addr: j.addr, early: pick, latest: pick + 90, dur: c.packMins, boothEnd: end });
+    stops.push({ id: j.key + '|s', kind: 'setup', job: j.key, label: 'Set up', name: j.client, place: j.venue || j.suburb, addr: j.addr, hint: { venue: j.venue, suburb: j.suburb }, venueOpen: vOpen, venueClose: vClose, venueClosed: !!(sp && !sp.length), early, latest, dur: c.setupMins, stayUntil: j.stay ? end : null, packAfterStay: j.stay ? c.packMins : 0, boothStart: start, boothEnd: end });
+    if (!j.stay && end != null) stops.push({ id: j.key + '|p', kind: 'pack', job: j.key, label: 'Pack down', name: j.client, place: j.venue || j.suburb, addr: j.addr, hint: { venue: j.venue, suburb: j.suburb }, early: pick, latest: pick + 90, dur: c.packMins, boothEnd: end });
   });
   (plan.extras || []).forEach(x => stops.push({ id: x.id, kind: 'extra', label: x.label || 'Stop', name: x.label || 'Stop', place: x.addr, addr: x.addr, early: x.at != null ? x.at : 0, latest: x.at != null ? x.at + 60 : 3 * DAY, dur: x.mins || 15 }));
   return stops.filter(s => !(plan.done || []).includes(s.id) || plan.keepDone);
@@ -1824,7 +1960,7 @@ function loadPlan(date, jobs) {
   const p = Object.assign(base, saved || {});
   const prevJobs = new Map((p.jobs || []).map(j => [j.key, j]));
   p.jobs = jobs.map(j => { const key = jobKey(j); const old = prevJobs.get(key) || {};
-    return { key, client: (j.client || 'Client').replace(/\s+/g, ' '), venue: (j.venue || '').replace(/\s+/g, ' '), suburb: j.suburb, booth: j.booth, setup: j.setup, pickup: j.pickup,
+    return { key, home: isHomeJob(j), client: (j.client || 'Client').replace(/\s+/g, ' '), venue: (j.venue || '').replace(/\s+/g, ' '), suburb: j.suburb, booth: j.booth, setup: j.setup, pickup: j.pickup,
       addr: old.addr || jobAddress(j), include: old.include !== false, stay: old.stay != null ? old.stay : attendantHours(j) > 0 && /full/i.test(j.staffNote || '') }; });
   return p;
 }
@@ -1845,51 +1981,71 @@ function pointFor(p, which) {
   const h = c.homes[idx]; return h ? { address: h.addr, label: h.label || 'Home' } : null;
 }
 
+const hoursForPJ = pj => pj.home ? { home: true } : hoursFor({ venue: pj.venue, suburb: pj.suburb });
+let googleBad = ''; // why the Google key failed this visit (then free maps are used)
 async function computePlan(keepOrder) {
   const p = rt.plan; const stops = buildStops(p);
   const startPt = pointFor(p, 'start'), endPt = pointFor(p, 'end');
   if (!startPt || !endPt || (!startPt.address && startPt.lat == null) || (!endPt.address && endPt.lat == null)) { rt.msg = { text: 'Choose where you start and finish first.', kind: 'bad' }; renderRoute(); return; }
   if (!stops.length) { rt.msg = { text: 'Tick at least one job to plan a route.', kind: 'bad' }; renderRoute(); return; }
   const missing = stops.find(s => !s.addr); if (missing) { rt.msg = { text: 'Add an address for ' + missing.name + ' first.', kind: 'bad' }; renderRoute(); return; }
-  rt.busy = 'Getting live traffic from Google Maps…'; rt.msg = null; renderRoute();
-  try {
-    // 1) one traffic-aware matrix between every place, for the time the day starts
-    const pts = [startPt, endPt].concat(stops.map(s => ({ address: s.addr })));
+  rt.msg = null;
+  const useGoogle = mapsKey() && (settings.routeEngine || 'auto') !== 'free' && !googleBad;
+  let engine = useGoogle ? 'google' : 'free', note = '';
+  const busy = t => { rt.busy = t; renderRoute(); };
+  const run = async () => {
+    const pts = [startPt, endPt].concat(stops.map(s => ({ address: s.addr, hint: s.hint, name: s.name })));
+    if (engine === 'free') {
+      for (let i = 0; i < pts.length; i++) {
+        const pt = pts[i]; if (pt.lat != null) { pt.ll = [pt.lat, pt.lng]; continue; }
+        busy('Finding the addresses on the map (' + (i + 1) + ' of ' + pts.length + ')…');
+        const g = await geocode(pt.address, pt.hint); if (!g) throw Object.assign(new Error('addr'), { code: 'addr', who: pt.name || pt.label, addr: pt.address }); pt.ll = g.ll;
+      }
+    }
+    busy(engine === 'google' ? 'Getting live traffic from Google Maps…' : 'Working out driving times…');
     const firstTime = Math.min(...stops.map(s => s.early)) - 60;
-    const M = await trafficMatrix(pts, p.date, p.leaveAt != null ? p.leaveAt : firstTime);
-    const idx = x => x === 'start' ? 0 : x === 'end' ? 1 : x + 2;
+    const M = engine === 'google' ? await trafficMatrix(pts, p.date, p.leaveAt != null ? p.leaveAt : firstTime) : await osmMatrix(pts, p.date, p.leaveAt != null ? p.leaveAt : firstTime);
     const bad = stops.findIndex((s, i) => !M[0][i + 2] && !M[i + 2][0]);
-    if (bad >= 0) { rt.busy = ''; rt.msg = { text: 'Google Maps could not find "' + stops[bad].addr + '". Fix the address for ' + stops[bad].name + ' and try again.', kind: 'bad' }; renderRoute(); return; }
+    if (bad >= 0) throw Object.assign(new Error('addr'), { code: 'addr', who: stops[bad].name, addr: stops[bad].addr });
+    const idx = x => x === 'start' ? 0 : x === 'end' ? 1 : x + 2;
     const travel = (a, b) => { const e = M[idx(a)][idx(b)]; return e ? e.mins : 60; };
-    // 2) best order (or keep the order the worker set)
     let order;
     if (keepOrder && p.order) { order = p.order.map(id => stops.findIndex(s => s.id === id)).filter(i => i >= 0); stops.forEach((s, i) => { if (!order.includes(i)) order.push(i); }); }
     else order = bestOrder(stops, travel, p.leaveAt);
     let sim = simulate(order, stops, startPt, travel, p.leaveAt);
-    // 3) exact legs with traffic for the time each drive starts
-    rt.busy = 'Checking traffic for each drive…'; renderRoute();
-    const seq = [startPt].concat(order.map(k => ({ address: stops[k].addr }))).concat([endPt]);
-    const legs = [];
-    let t = sim.leave;
+    busy(engine === 'google' ? 'Checking traffic for each drive…' : 'Drawing the route…');
+    const seq = [pts[0]].concat(order.map(k => pts[k + 2])).concat([pts[1]]);
+    const legs = []; let t = sim.leave;
     for (let i = 0; i < seq.length - 1; i++) {
-      const leg = await trafficLeg(seq[i], seq[i + 1], p.date, t); legs.push(leg);
+      const leg = engine === 'google' ? await trafficLeg(seq[i], seq[i + 1], p.date, t) : await osmLeg(seq[i], seq[i + 1], p.date, t); legs.push(leg);
       if (i < order.length) { const s = stops[order[i]]; const arrive = t + leg.mins; const begin = Math.max(arrive, s.early); let lv = begin + s.dur; if (s.stayUntil != null) lv = Math.max(lv, s.stayUntil) + s.packAfterStay; t = lv; }
     }
-    // re-run the times with the exact leg durations (and leave home later/earlier to match the first set-up)
     const legMins = legs.map(l => l.mins);
     const travel2 = (a, b) => { if (a === 'start') return legMins[0]; const pos = order.indexOf(a); return legMins[pos + 1]; };
     sim = simulate(order, stops, startPt, travel2, p.leaveAt);
+    return { order, legs, sim };
+  };
+  try {
+    let out;
+    try { out = await run(); }
+    catch (e) {
+      if (engine !== 'google' || !(e.code === 'key' || e.code === 'api')) throw e;
+      googleBad = e.message; engine = 'free'; note = ' Google Maps did not work (' + e.message + '), so free maps were used instead.';
+      out = await run();
+    }
+    const { order, legs, sim } = out; const L1 = l => ({ mins: l.mins, usual: l.usual, m: l.m, poly: l.poly, to: l.to, from: l.from, traffic: l.traffic, est: !!l.est });
     p.order = order.map(k => stops[k].id); p.sheetSig = planSig(p.jobs);
-    p.result = { at: Date.now(), leave: sim.leave, backHome: sim.backHome, late: sim.late, drive: sim.drive, wait: sim.wait,
-      steps: sim.steps.map((st, i) => Object.assign({ id: stops[st.k].id }, st, { k: undefined, leg: { mins: legs[i].mins, usual: legs[i].usual, m: legs[i].m, poly: legs[i].poly, to: legs[i].to, from: legs[i].from, traffic: legs[i].traffic } })),
-      home: { mins: legs[legs.length - 1].mins, usual: legs[legs.length - 1].usual, m: legs[legs.length - 1].m, poly: legs[legs.length - 1].poly, to: legs[legs.length - 1].to, traffic: legs[legs.length - 1].traffic },
-      stops: stops.map(s => ({ id: s.id, kind: s.kind, label: s.label, name: s.name, place: s.place, addr: s.addr, early: s.early, latest: s.latest, dur: s.dur, stayUntil: s.stayUntil, boothStart: s.boothStart, boothEnd: s.boothEnd })),
+    p.result = { at: Date.now(), engine, leave: sim.leave, backHome: sim.backHome, late: sim.late, drive: sim.drive, wait: sim.wait,
+      steps: sim.steps.map((st, i) => Object.assign({ id: stops[st.k].id }, st, { k: undefined, leg: L1(legs[i]) })),
+      home: L1(legs[legs.length - 1]),
+      stops: stops.map(s => ({ id: s.id, kind: s.kind, label: s.label, name: s.name, place: s.place, addr: s.addr, early: s.early, latest: s.latest, dur: s.dur, stayUntil: s.stayUntil, boothStart: s.boothStart, boothEnd: s.boothEnd, venueOpen: s.venueOpen, venueClose: s.venueClose, venueClosed: s.venueClosed })),
       startLabel: startPt.label, endLabel: endPt.label, startAddr: startPt.address || (startPt.lat + ',' + startPt.lng), endAddr: endPt.address };
-    rt.busy = ''; rt.msg = { text: 'Route planned with ' + (legs.some(l => l.traffic) ? 'live and predicted traffic' : 'current traffic') + ' at ' + hm(new Date().getHours() * 60 + new Date().getMinutes()) + '.', kind: 'ok' };
+    rt.busy = '';
+    rt.msg = { kind: 'ok', text: (engine === 'google' ? 'Route planned with live Google traffic' : 'Route planned with free OpenStreetMap maps. Traffic is estimated for the day and time of each drive (Melbourne peak hours are slower); there is no live traffic without a working Google key.') + note };
     savePlan(); renderRoute();
   } catch (e) {
     rt.busy = '';
-    rt.msg = { kind: 'bad', text: e.code === 'nokey' ? 'Add your Google Maps key below first (see the setup steps).' : e.code === 'key' ? 'Google Maps refused the key: ' + e.message + '. Check the key and that the Routes API is switched on.' : e.code === 'offline' ? 'No internet connection, so live traffic could not be checked. Connect and try again.' : 'Google Maps could not plan this route (' + e.message + ').' };
+    rt.msg = { kind: 'bad', text: e.code === 'addr' ? 'The map could not find "' + e.addr + '" for ' + e.who + '. Fix the address and try again.' : e.code === 'offline' ? 'No internet connection, so the route could not be worked out. Connect and try again.' : 'The route could not be planned (' + e.message + '). Try again in a minute.' };
     renderRoute();
   }
 }
@@ -1908,13 +2064,14 @@ function renderRoute() {
     '<div class="pagehead"><div><h1>Route planner</h1><p>Your jobs for the day in the best order, with driving times from Google Maps traffic.</p></div>' +
     '<div class="actions"><button class="secondary" type="button" id="rtPrev" aria-label="Previous day">‹</button><b class="monthname">' + esc(rt.date === todayISO() ? 'Today, ' : '') + esc(dayLabel(rt.date)) + '</b><button class="secondary" type="button" id="rtNext" aria-label="Next day">›</button>' + (rt.date !== todayISO() ? '<button class="secondary" type="button" id="rtToday">Today</button>' : '') + '</div></div>' +
     (prob ? '<p class="notice warn">' + esc(prob) + '</p>' : '') +
-    (!mapsKey() ? '<p class="notice">To use live traffic, add your Google Maps key under "Route settings" below.</p>' : '') +
+    (!mapsKey() ? '<p class="notice">Driving times use free maps with estimated traffic. For live traffic, add a working Google Maps key under "Route settings".</p>' : '') +
     (rt.loading && !data ? '<p class="empty">Loading the run sheet…</p>' : !p || !p.jobs.length ? '<section class="card"><p class="empty">' + (data && !prob ? 'No jobs on the run sheet for ' + esc(dayLabel(rt.date)) + '.' : 'Nothing to plan yet.') + '</p></section>' :
     '<section class="card"><h2>Jobs this day</h2><div class="rtjobs">' + p.jobs.map((j, i) => {
       const br = boothRange(j.booth);
       return '<div class="rtjob' + (j.include ? '' : ' off') + '"><label class="check"><input type="checkbox" data-inc="' + i + '"' + (j.include ? ' checked' : '') + '> <b>' + esc(j.client) + '</b> ' + (sheetChanges[j.key] ? (sheetChanges[j.key].type === 'new' ? '<span class="pill newpill">New booking</span>' : '<span class="pill chgpill">Updated</span>') : '') + '</label>' +
         '<span class="rtmeta">Booth ' + esc(j.booth || 'time not set') + ' · earliest set-up ' + esc(j.setup || 'not set') + (j.pickup ? ' · pick up ' + esc(j.pickup) : '') + '</span>' +
         '<label class="f">Address<input type="text" data-addr="' + i + '" value="' + esc(j.addr) + '"></label>' +
+        '<div class="vhours"><span>' + esc(hoursText(hoursForPJ(j), rt.date)) + '</span>' + (j.home ? '' : ' <button class="linkish" type="button" data-vh="' + i + '">Change</button>') + '</div><div id="vhEdit' + i + '"></div>' +
         '<label class="check"><input type="checkbox" data-stay="' + i + '"' + (j.stay ? ' checked' : '') + '> I stay for the whole event' + (br ? ' (until ' + esc(hm(br.end)) + ')' : '') + '</label></div>'; }).join('') + '</div>' +
       '<div class="fields" style="margin-top:14px"><label class="f">Start from<select id="rtStart" class="sel">' + homeOpts(p.here ? -3 : p.start) + (p.here ? '<option value="-3" selected>Where I was at ' + esc(hm(p.leaveAt)) + '</option>' : '') + '</select></label>' +
       (p.start === -2 && !p.here ? '<label class="f">Start address<input id="rtStartC" type="text" value="' + esc(p.startCustom || '') + '"></label>' : '') +
@@ -1927,6 +2084,7 @@ function renderRoute() {
     '<section class="card"><h2>Route settings</h2>' + routeSettingsHTML(c) + '</section>';
   wireRoute(p, c);
   if (r) drawMap(p);
+  if (p) ensureHours(p.jobs.filter(j => !j.home).map(j => ({ venue: j.venue, suburb: j.suburb })), () => { if (route.name === 'route' && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))) renderRoute(); });
   if (!data && !rt.loading) rtFetch();
 }
 function routeResultHTML(p) {
@@ -1944,10 +2102,12 @@ function routeResultHTML(p) {
     '<ol class="timeline">' +
       '<li class="tl home"><span class="tlt">' + esc(hm(r.leave)) + '</span><div><b>Leave ' + esc(r.startLabel) + '</b></div></li>' +
       r.steps.map((st, i) => { const s = byId(st.id); const done = (p.done || []).includes(st.id); const late = st.lateBy > 0.5;
-        const legTxt = dur(st.leg.mins) + ' drive · ' + km(st.leg.m) + (st.leg.usual && st.leg.mins - st.leg.usual >= 3 ? ' · ' + Math.round(st.leg.mins - st.leg.usual) + ' min extra from traffic' : st.leg.traffic ? ' · traffic is light' : '');
+        const extra = st.leg.usual ? Math.round(st.leg.mins - st.leg.usual) : 0;
+        const legTxt = dur(st.leg.mins) + ' drive · ' + km(st.leg.m) + (st.leg.est ? (extra >= 3 ? ' · includes about ' + extra + ' min for usual traffic at that time' : ' · light traffic expected') : extra >= 3 ? ' · ' + extra + ' min extra from traffic' : st.leg.traffic ? ' · traffic is light' : '');
         return '<li class="tl leg"><span class="tlt"></span><div class="legtxt">' + esc(legTxt) + ' <a href="' + esc('https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(s.addr)) + '" target="_blank" rel="noopener">Google Maps</a> · <a href="' + esc('https://maps.apple.com/?dirflg=d&daddr=' + encodeURIComponent(s.addr)) + '" target="_blank" rel="noopener">Apple Maps</a></div></li>' +
           '<li class="tl stop' + (late ? ' late' : '') + (done ? ' done' : '') + '"><span class="tlt">' + esc(hm(st.begin)) + '</span><div><div class="stophead"><span class="stopno">' + (i + 1) + '</span><b>' + esc(s.label) + ': ' + esc(s.name) + '</b>' + (done ? '<span class="pill paid">Done</span>' : '') + '</div>' +
-          '<p class="stopsub">' + esc(s.place || '') + ' · arrive ' + esc(hm(st.arrive)) + (st.waitBefore > 4 ? ' (wait ' + esc(dur(st.waitBefore)) + ')' : '') + ' · ' + (s.kind === 'setup' ? 'set up ' + esc(hm(st.begin)) + '–' + esc(hm(st.end)) + (s.boothStart != null ? ', booth starts ' + esc(hm(s.boothStart)) : '') + (s.stayUntil != null ? ', staying until ' + esc(hm(s.stayUntil)) : '') : s.kind === 'pack' ? 'booth ends ' + esc(hm(s.boothEnd)) + ', pack down ' + esc(hm(st.begin)) + '–' + esc(hm(st.end)) : esc(dur(s.dur)) + ' stop') + '</p>' +
+          '<p class="stopsub">' + esc(s.place || '') + ' · arrive ' + esc(hm(st.arrive)) + (st.waitBefore > 4 ? ' (wait ' + esc(dur(st.waitBefore)) + (s.venueOpen != null && Math.abs(st.begin - s.venueOpen) < 1 ? ', venue opens ' + esc(hm(s.venueOpen)) : '') + ')' : '') + ' · ' + (s.kind === 'setup' ? 'set up ' + esc(hm(st.begin)) + '–' + esc(hm(st.end)) + (s.boothStart != null ? ', booth starts ' + esc(hm(s.boothStart)) : '') + (s.stayUntil != null ? ', staying until ' + esc(hm(s.stayUntil)) : '') : s.kind === 'pack' ? 'booth ends ' + esc(hm(s.boothEnd)) + ', pack down ' + esc(hm(st.begin)) + '–' + esc(hm(st.end)) : esc(dur(s.dur)) + ' stop') + '</p>' +
+          (s.kind === 'setup' && s.venueClosed ? '<p class="status bad">The venue is listed as closed on this day. Check access with the venue.</p>' : '') + (s.kind === 'setup' && s.venueClose != null && st.end > s.venueClose && (s.boothStart == null || s.venueClose < s.boothStart) ? '<p class="status bad">The venue\'s listed hours end at ' + esc(hm(s.venueClose)) + ', before your set-up finishes. Check access with the venue.</p>' : '') +
           (late ? '<p class="status bad">' + (s.kind === 'setup' ? 'Set-up would finish ' + esc(dur(st.lateBy)) + ' too late for the booth start (with your ' + p.cfg.bufferMins + ' min buffer).' : 'About ' + esc(dur(st.lateBy)) + ' later than planned.') + '</p>' : '') +
           '<div class="stopbtns"><button class="linkish" type="button" data-up="' + i + '"' + (i === 0 ? ' disabled' : '') + '>Move up</button><button class="linkish" type="button" data-down="' + i + '"' + (i === r.steps.length - 1 ? ' disabled' : '') + '>Move down</button><button class="linkish" type="button" data-done="' + esc(st.id) + '">' + (done ? 'Not done' : 'Mark done') + '</button>' + (s.kind === 'extra' ? '<button class="linkish" type="button" data-rmx="' + esc(st.id) + '">Remove</button>' : '') + '</div></div></li>'; }).join('') +
       '<li class="tl leg"><span class="tlt"></span><div class="legtxt">' + esc(dur(r.home.mins) + ' drive · ' + km(r.home.m)) + '</div></li>' +
@@ -1958,6 +2118,8 @@ function routeSettingsHTML(c) {
   return '<div class="stack">' + c.homes.map((h, i) => '<div class="homerow"><input type="text" data-hl="' + i + '" value="' + esc(h.label) + '" placeholder="Name, e.g. Mount Duneed" aria-label="Name"><input type="text" data-ha="' + i + '" value="' + esc(h.addr) + '" placeholder="Full address" aria-label="Address"><button class="iconbtn" type="button" data-hdel="' + i + '" aria-label="Remove address">×</button></div>').join('') +
     '<div><button class="secondary" type="button" id="rtHomeAdd">+ Add a home or base address</button></div></div>' +
     '<div class="fields" style="margin-top:14px"><label class="f">Set-up takes (minutes)<input id="rtSetup" type="number" min="5" max="240" value="' + c.setupMins + '"></label><label class="f">Pack-down takes (minutes)<input id="rtPack" type="number" min="5" max="240" value="' + c.packMins + '"></label><label class="f">Ready this long before the booth starts (minutes)<input id="rtBuf" type="number" min="0" max="120" value="' + c.bufferMins + '"></label></div>' +
+    '<label class="f" style="margin-top:14px">Driving times from<select id="rtEngine" class="sel"><option value="auto"' + ((settings.routeEngine || 'auto') === 'auto' ? ' selected' : '') + '>Google live traffic when the key works, otherwise free maps</option><option value="free"' + (settings.routeEngine === 'free' ? ' selected' : '') + '>Free maps only (OpenStreetMap, estimated traffic)</option></select></label>' +
+    (googleBad ? '<p class="status bad">Google Maps key problem: ' + esc(googleBad) + '. Free maps are being used until it is fixed.</p>' : '') +
     '<label class="f" style="margin-top:14px">Google Maps key (for live traffic)<input id="rtKey" type="password" autocomplete="off" spellcheck="false" value="' + esc(mapsKey()) + '" placeholder="Paste the key that starts with AIza…"></label>' +
     '<p class="hint">Saved in your account only, never in the website code. Only the Routes API should be allowed on this key.</p>' +
     '<div class="actions" style="margin-top:10px"><button class="primary" type="button" id="rtSaveCfg">Save route settings</button></div><p class="status" id="rtCfgMsg" role="status"></p>';
@@ -1974,12 +2136,21 @@ function wireRoute(p, c) {
     const cl = (v, a, b, d) => { v = parseInt(v, 10); return isFinite(v) ? Math.min(b, Math.max(a, v)) : d; };
     settings.route = { homes: readHomes().filter(h => h.addr).slice(0, 6), setupMins: cl($('rtSetup').value, 5, 240, 45), packMins: cl($('rtPack').value, 5, 240, 30), bufferMins: cl($('rtBuf').value, 0, 120, 15) };
     const k = $('rtKey').value.trim(); if (k && !/^[A-Za-z0-9_-]{30,60}$/.test(k)) { $('rtCfgMsg').className = 'status bad'; $('rtCfgMsg').textContent = 'That does not look like a Google key. It should start with AIza.'; return; }
-    settings.mapsKey = k; if (mode !== 'cloud') store.set('mapsKey', k);
+    settings.mapsKey = k; if (mode !== 'cloud') store.set('mapsKey', k); settings.routeEngine = $('rtEngine').value === 'free' ? 'free' : 'auto'; googleBad = ''; placesBroken = false;
     saveSettings(); if (p) { p.cfg = { setupMins: settings.route.setupMins, packMins: settings.route.packMins, bufferMins: settings.route.bufferMins }; if (p.start < 0 && p.start !== -2 && settings.route.homes.length) p.start = 0; if (p.end < 0 && p.end !== -2 && settings.route.homes.length) p.end = 0; }
     rt.msg = { text: 'Route settings saved.', kind: 'ok' }; renderRoute();
   });
   if (!p) return;
   document.querySelectorAll('[data-inc]').forEach(b => b.addEventListener('change', () => { p.jobs[+b.dataset.inc].include = b.checked; savePlan(); renderRoute(); }));
+  document.querySelectorAll('[data-vh]').forEach(b => b.addEventListener('click', () => { const i = +b.dataset.vh; const j = p.jobs[i]; const box = $('vhEdit' + i); const dow = dateOf(rt.date).getDay(); const cur = hoursOn(hoursForPJ(j), rt.date);
+    const t2 = m => m == null ? '' : String(Math.floor((m % DAY) / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+    box.innerHTML = '<div class="vhedit"><label class="f">Opens<input type="time" id="vhO' + i + '" value="' + (cur && cur[0] ? t2(cur[0][0]) : '') + '"></label><label class="f">Closes<input type="time" id="vhC' + i + '" value="' + (cur && cur[0] ? t2(cur[cur.length - 1][1]) : '') + '"></label>' +
+      '<div class="actions"><button class="primary" type="button" id="vhSave' + i + '">Save for ' + DOW[dow] + 'days</button><button class="secondary" type="button" id="vhShut' + i + '">Closed that day</button><button class="linkish" type="button" id="vhClear' + i + '">Use the online hours</button></div></div>';
+    const setVH = v => { const vk = venueKey(j); settings.venueHours = settings.venueHours || {}; const m = Object.assign({}, settings.venueHours[vk] || {}); if (v === null) delete m[dow]; else m[dow] = v; if (Object.keys(m).length) settings.venueHours[vk] = m; else delete settings.venueHours[vk]; saveSettings(); savePlan(); renderRoute(); };
+    $('vhSave' + i).addEventListener('click', () => { const o = parseClock($('vhO' + i).value), c = parseClock($('vhC' + i).value); if (o == null || c == null) return; setVH([[o, c <= o ? c + DAY : c]]); });
+    $('vhShut' + i).addEventListener('click', () => setVH([]));
+    $('vhClear' + i).addEventListener('click', () => setVH(null));
+  }));
   document.querySelectorAll('[data-stay]').forEach(b => b.addEventListener('change', () => { p.jobs[+b.dataset.stay].stay = b.checked; savePlan(); }));
   document.querySelectorAll('[data-addr]').forEach(b => b.addEventListener('change', () => { p.jobs[+b.dataset.addr].addr = S(b.value.trim(), 200); savePlan(); }));
   $('rtStart').addEventListener('change', e => { const v = +e.target.value; if (v !== -3) { delete p.here; p.start = v; } savePlan(); renderRoute(); });
