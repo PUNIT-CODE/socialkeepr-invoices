@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-pbepbGlcU+VVmcAvQYmtiyuehqgXNsQyRD4nMaVKC2s=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-YixSwHucqHzv1hxrOM06nZIk81pLntMY+xTtjFkVmZA=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -228,6 +228,10 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--field); 
 a.navlink { display: inline-block; text-decoration: none; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 16px; }
 .okv { color: var(--good); } .warnv { color: var(--warn); }
 @media (max-width: 480px) { .tl { grid-template-columns: 64px minmax(0, 1fr); gap: 8px; } }
+.newpill { background: var(--good-soft); color: var(--good); } .chgpill { background: var(--warn-soft); color: var(--warn); }
+.msbadge { grid-column: 1; margin-top: 4px; }
+.toast { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 16px); z-index: 70; max-width: min(420px, calc(100vw - 32px)); background: var(--panel); color: var(--fg); border: 1px solid var(--accent); border-radius: 12px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.18); display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.toast b { font-size: 15px; } .toast .actions { margin-top: 6px; }
 .syncline { display: flex; gap: 8px; align-items: center; margin: 0; }
 .sharepanel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); display: flex; flex-direction: column; gap: 10px; }
 .sharepanel p { margin: 0; font-size: 14px; }
@@ -572,6 +576,7 @@ function dashHTML() {
         recent.map(i => '<tr class="click" data-no="' + esc(i.no) + '" tabindex="0"><td class="num">#' + esc(i.no) + '</td><td>' + esc(fmtDate(i.date)) + '</td><td>' + pill(i.paid) + '</td><td class="r num">' + esc(money(totalsOf(i).all)) + '</td></tr>').join('') +
         '</tbody></table></div>' : '<p class="empty">Invoices you save will show up here.</p>') + '</section>' +
     '</div>' +
+    sorted().filter(i => !i.paid).slice(0, 6).map(i => { const mm = sheetMismatch(i); return mm ? '<p class="notice warn">Invoice ' + esc(i.no) + ': the run sheet now shows ' + mm.count + ' jobs for ' + esc(weekLabel(mm.ws)) + ' but the invoice has ' + mm.have + '. <button class="secondary" type="button" data-open="' + esc(i.no) + '">Open invoice ' + esc(i.no) + '</button></p>' : ''; }).join('') +
     (invoices.some(i => i.totalOverride != null) ? '<p class="notice warn">Invoice ' + invoices.filter(i => i.totalOverride != null).map(i => '#' + i.no).join(', ') + ' ' + (invoices.filter(i => i.totalOverride != null).length === 1 ? 'uses' : 'use') + ' the total typed on the original invoice, which does not match its own line items. Open it to check.</p>' : '');
 }
 function fmtNum(n) { return round2(n).toLocaleString('en-AU', { maximumFractionDigits: 2 }); }
@@ -603,6 +608,7 @@ function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))); co
 function wireDash() {
   if (flashDash) { const p = document.createElement('p'); p.className = 'notice'; p.textContent = flashDash; flashDash = null; $('view').insertBefore(p, $('view').children[1]); }
   const il = $('dashImport'); if (il) il.addEventListener('click', () => go({ name: 'import' }));
+  document.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => go({ name: 'inv', no: +b.dataset.open })));
   const n = $('dashNew'); if (n) n.addEventListener('click', () => $('navNew').click());
   document.querySelectorAll('.recent tr.click').forEach(tr => { const open = () => go({ name: 'inv', no: Number(tr.dataset.no) }); tr.addEventListener('click', open); tr.addEventListener('keydown', e => { if (e.key === 'Enter') open(); }); });
   const wrap = $('chartwrap'); if (!wrap) return; const svg = wrap.querySelector('svg'); const tip = $('tip');
@@ -840,7 +846,7 @@ function renderInvoice(no) {
   const t = totalsOf(inv);
   $('view').innerHTML =
     '<div class="pagehead"><div><h1>Invoice ' + esc(inv.no) + ' ' + pill(inv.paid) + '</h1><p>' + esc(fmtDate(inv.date)) + ' · billed to ' + esc(inv.billedTo) + '</p></div></div>' +
-    (inv.note ? '<p class="notice">' + esc(inv.note) + '</p>' : '') +
+    (inv.note ? '<p class="notice">' + esc(inv.note) + '</p>' : '') + (sheetMismatch(inv) ? mismatchHTML(inv, sheetMismatch(inv)) : '') +
     '<div class="viewgrid"><div><div class="prevlabel"><span>Invoice</span><span class="fname">' + esc(fileNameOf(inv)) + '</span></div><div class="paperbox"><div class="paper">' + paperSVG(inv) + '</div></div></div>' +
     '<div class="stack"><section class="card"><h2>Actions</h2><div class="actions">' +
       '<button class="primary" type="button" id="vDl">Download PDF</button>' +
@@ -856,6 +862,7 @@ function renderInvoice(no) {
       (String(inv.hours ?? '') !== '' ? '<dt>Hours worked</dt><dd>' + esc(inv.hours) + (inv.hoursDays ? ' (' + esc(inv.hoursDays) + ')' : '') + '</dd>' : '') +
       '<dt>Status</dt><dd>' + (inv.paid ? 'Paid' + (inv.paidAt ? ' on ' + esc(fmtDate(inv.paidAt.slice(0, 10))) : '') : 'Not paid yet') + '</dd>' +
     '</dl></section></div></div>';
+  wireMismatch();
   if (flash) { say(flash.msg, flash.ok ? 'ok' : 'bad'); flash = null; }
   $('vDl').addEventListener('click', async () => { const r = await downloadPdf(inv); say(r.msg, r.ok ? 'ok' : 'bad'); });
   $('vPaid').addEventListener('click', async () => { const rec = clone(inv); rec.paid = !rec.paid; if (rec.paid) rec.paidAt = new Date().toISOString(); else delete rec.paidAt;
@@ -954,12 +961,12 @@ async function loadMonth(y, m, force) {
   const cached = sheetCache[key];
   const id = sheetIdOf(sheetCfg.link);
   if (!id || !canReachGoogle) { if (cached) return Object.assign({ key, offline: !canReachGoogle ? 'upload' : 'nolink' }, cached); return { key, jobs: [], missing: !id ? 'nolink' : 'private' }; }
-  if (cached && !force && Date.now() - cached.at < 5 * 60 * 1000) return Object.assign({ key }, cached);
+  if (cached && !force && Date.now() - cached.at < 60 * 1000) return Object.assign({ key }, cached);
   try {
     for (const tab of tabNames(y, m)) {
       const jobs = jobsFromGrid(await gvizGrid(id, tab));
       const inMonth = jobs.filter(j => j.date.slice(0, 7) === key);
-      if (inMonth.length && inMonth.length >= jobs.length / 2) { sheetCache[key] = { at: Date.now(), jobs: inMonth, src: 'Google Sheet, tab ' + tab }; saveSheetCache(); return Object.assign({ key }, sheetCache[key]); }
+      if (inMonth.length && inMonth.length >= jobs.length / 2) { if (cached) recordChanges(cached.jobs, inMonth); sheetCache[key] = { at: Date.now(), jobs: inMonth, src: 'Google Sheet, tab ' + tab }; saveSheetCache(); return Object.assign({ key }, sheetCache[key]); }
     }
     return Object.assign({ key, jobs: [], notab: true }, cached ? { jobs: cached.jobs, at: cached.at, src: cached.src } : {});
   } catch (e) {
@@ -1036,7 +1043,7 @@ function renderRunSheet() {
 function jobCard(j) {
   const att = attendantHours(j);
   const line = (k, v) => v ? '<div><dt>' + k + '</dt><dd>' + esc(v) + '</dd></div>' : '';
-  return '<article class="job"><header><b>' + esc(j.booth || 'Time not set') + '</b>' + (j.style ? '<span class="pill neutral">' + esc(j.style) + '</span>' : '') + (att ? '<span class="pill att">Attendant ' + fmtNum(att) + ' hrs</span>' : (j.staffNote ? '<span class="pill neutral">' + esc(j.staffNote) + '</span>' : '')) + '</header>' +
+  return '<article class="job"><header><b>' + esc(j.booth || 'Time not set') + '</b>' + (j.style ? '<span class="pill neutral">' + esc(j.style) + '</span>' : '') + changeBadge(j) + (att ? '<span class="pill att">Attendant ' + fmtNum(att) + ' hrs</span>' : (j.staffNote ? '<span class="pill neutral">' + esc(j.staffNote) + '</span>' : '')) + '</header>' +
     '<p class="jt">' + esc(j.client || 'Client') + (j.event ? ' · ' + esc(j.event) : '') + '</p>' +
     '<p class="jv">' + esc([j.venue, j.address || j.suburb].filter(Boolean).join(', ')) + '</p>' +
     '<dl>' + line('Set up', j.setup) + line('Guests arrive', j.arrival) + line('Pick up', j.pickup) + line('Backdrop', j.backdrop) + line('Phone', j.phone) + line('Contact', j.contact2) + line('Parking', j.parking) + line('Album', j.album) + line('Props', j.props) + line('Notes', [j.floorplan, j.notes].filter(Boolean).join(' · ')) + '</dl></article>';
@@ -1650,7 +1657,7 @@ function msJobCard(j, k, tpls) {
   }
   return '<article class="msjob' + (open ? ' open' : '') + '"><button class="mshead" type="button" data-job="' + esc(jobKey(j)) + '" aria-expanded="' + open + '">' +
     '<span class="mstime">' + esc((j.booth || 'Time not set').replace(/\s+/g, ' ')) + '</span><span class="msname">' + esc((j.client || 'Client').replace(/\s+/g, ' ')) + (j.event ? ' · ' + esc(j.event) : '') + '</span>' +
-    '<span class="msvenue">' + esc(j.venue || j.suburb || '') + (j.setup ? ' · set up ' + esc(j.setup) : '') + '</span>' +
+    '<span class="msvenue">' + esc(j.venue || j.suburb || '') + (j.setup ? ' · set up ' + esc(j.setup) : '') + '</span>' + (changeBadge(j) ? '<span class="msbadge">' + changeBadge(j) + '</span>' : '') +
     (sent.length ? '<span class="pill paid">' + sent.length + ' sent · last: ' + esc(sent[sent.length - 1].tpl) + '</span>' : '<span class="pill neutral">No messages yet</span>') + '</button>' + body + '</article>';
 }
 function tplEditor(tpls) {
@@ -1867,7 +1874,7 @@ async function computePlan(keepOrder) {
     const legMins = legs.map(l => l.mins);
     const travel2 = (a, b) => { if (a === 'start') return legMins[0]; const pos = order.indexOf(a); return legMins[pos + 1]; };
     sim = simulate(order, stops, startPt, travel2, p.leaveAt);
-    p.order = order.map(k => stops[k].id);
+    p.order = order.map(k => stops[k].id); p.sheetSig = planSig(p.jobs);
     p.result = { at: Date.now(), leave: sim.leave, backHome: sim.backHome, late: sim.late, drive: sim.drive, wait: sim.wait,
       steps: sim.steps.map((st, i) => Object.assign({ id: stops[st.k].id }, st, { k: undefined, leg: { mins: legs[i].mins, usual: legs[i].usual, m: legs[i].m, poly: legs[i].poly, to: legs[i].to, from: legs[i].from, traffic: legs[i].traffic } })),
       home: { mins: legs[legs.length - 1].mins, usual: legs[legs.length - 1].usual, m: legs[legs.length - 1].m, poly: legs[legs.length - 1].poly, to: legs[legs.length - 1].to, traffic: legs[legs.length - 1].traffic },
@@ -1900,7 +1907,7 @@ function renderRoute() {
     (rt.loading && !data ? '<p class="empty">Loading the run sheet…</p>' : !p || !p.jobs.length ? '<section class="card"><p class="empty">' + (data && !prob ? 'No jobs on the run sheet for ' + esc(dayLabel(rt.date)) + '.' : 'Nothing to plan yet.') + '</p></section>' :
     '<section class="card"><h2>Jobs this day</h2><div class="rtjobs">' + p.jobs.map((j, i) => {
       const br = boothRange(j.booth);
-      return '<div class="rtjob' + (j.include ? '' : ' off') + '"><label class="check"><input type="checkbox" data-inc="' + i + '"' + (j.include ? ' checked' : '') + '> <b>' + esc(j.client) + '</b></label>' +
+      return '<div class="rtjob' + (j.include ? '' : ' off') + '"><label class="check"><input type="checkbox" data-inc="' + i + '"' + (j.include ? ' checked' : '') + '> <b>' + esc(j.client) + '</b> ' + (sheetChanges[j.key] ? (sheetChanges[j.key].type === 'new' ? '<span class="pill newpill">New booking</span>' : '<span class="pill chgpill">Updated</span>') : '') + '</label>' +
         '<span class="rtmeta">Booth ' + esc(j.booth || 'time not set') + ' · earliest set-up ' + esc(j.setup || 'not set') + (j.pickup ? ' · pick up ' + esc(j.pickup) : '') + '</span>' +
         '<label class="f">Address<input type="text" data-addr="' + i + '" value="' + esc(j.addr) + '"></label>' +
         '<label class="check"><input type="checkbox" data-stay="' + i + '"' + (j.stay ? ' checked' : '') + '> I stay for the whole event' + (br ? ' (until ' + esc(hm(br.end)) + ')' : '') + '</label></div>'; }).join('') + '</div>' +
@@ -1910,6 +1917,7 @@ function renderRoute() {
       '<label class="f">Leave at (optional)<input id="rtLeave" type="time" value="' + (p.leaveAt != null ? String(Math.floor((p.leaveAt % DAY) / 60)).padStart(2, '0') + ':' + String(Math.round(p.leaveAt % 60)).padStart(2, '0') : '') + '"></label></div>' +
       '<div class="actions" style="margin-top:12px"><button class="primary" type="button" id="rtPlan"' + (rt.busy ? ' disabled' : '') + '>' + (r ? 'Plan again (best order)' : 'Plan my route') + '</button>' + (r ? '<button class="secondary" type="button" id="rtKeep"' + (rt.busy ? ' disabled' : '') + '>Update times, keep my order</button><button class="secondary" type="button" id="rtHere"' + (rt.busy ? ' disabled' : '') + '>Re-plan from where I am now</button>' : '') + '</div>' +
       (rt.busy ? '<p class="notice">' + esc(rt.busy) + '</p>' : '') + (rt.msg ? '<p class="status ' + rt.msg.kind + '">' + esc(rt.msg.text) + '</p>' : '') + '</section>' +
+      (r && p.sheetSig && p.sheetSig !== planSig(p.jobs) ? '<p class="notice warn">The run sheet has changed since this route was planned (a booking was added, removed or its times or address changed). Press <b>Plan again</b> to use the latest run sheet.</p>' : '') +
       (r ? routeResultHTML(p) : '')) +
     '<section class="card"><h2>Route settings</h2>' + routeSettingsHTML(c) + '</section>';
   wireRoute(p, c);
@@ -2026,6 +2034,96 @@ async function pullCloudPlan(silent) {
   if (v) { rt.saved = rt.saved || {}; const local = store.get(planKey(date), null); if (!local || (v.result && (!local.result || v.result.at > local.result.at))) { rt.saved[date] = v; store.set(planKey(date), v); rt.plan = null; } }
   if (!silent && route.name === 'route') renderRoute();
 }
+
+/* ---------- keeping up with the run sheet: re-check it in the background and point out what changed ---------- */
+const FP_FIELDS = [['booth', 'booth time'], ['setup', 'set-up time'], ['pickup', 'pick-up time'], ['address', 'address'], ['venue', 'venue'], ['phone', 'phone'], ['staffNote', 'attendant'], ['contact2', 'other contact'], ['event', 'event']];
+let sheetChanges = store.get('sheetChanges', {}); // jobKey -> { type: 'new' | 'changed', at, fields, date, client }
+(function pruneChanges() { Object.keys(sheetChanges).forEach(k => { if (!sheetChanges[k] || Date.now() - sheetChanges[k].at > 48 * 3600e3) delete sheetChanges[k]; }); store.set('sheetChanges', sheetChanges); })();
+let freshChanges = []; // found during the current check
+function recordChanges(oldJobs, newJobs) {
+  if (!Array.isArray(oldJobs)) return;
+  const from = addDays(todayISO(), -14);
+  const before = new Map(oldJobs.map(j => [jobKey(j), j]));
+  const after = new Map(newJobs.map(j => [jobKey(j), j]));
+  after.forEach((j, k) => {
+    if (j.date < from) return;
+    const o = before.get(k);
+    if (!o) { sheetChanges[k] = { type: 'new', at: Date.now(), fields: [], date: j.date, client: S(j.client, 60) }; freshChanges.push({ type: 'new', job: j }); return; }
+    const diff = FP_FIELDS.filter(([f]) => String(o[f] || '').replace(/\s+/g, ' ').trim() !== String(j[f] || '').replace(/\s+/g, ' ').trim()).map(x => x[1]);
+    if (diff.length) { const prev = sheetChanges[k]; sheetChanges[k] = { type: prev && prev.type === 'new' ? 'new' : 'changed', at: Date.now(), fields: diff, date: j.date, client: S(j.client, 60) }; freshChanges.push({ type: 'changed', job: j, fields: diff }); }
+  });
+  before.forEach((j, k) => { if (!after.has(k) && j.date >= from) { delete sheetChanges[k]; freshChanges.push({ type: 'removed', job: j }); } });
+  store.set('sheetChanges', sheetChanges);
+}
+function changeBadge(j) {
+  const c = sheetChanges[jobKey(j)]; if (!c) return '';
+  return c.type === 'new' ? '<span class="pill newpill">New booking</span>' : '<span class="pill chgpill" title="' + esc('Changed: ' + c.fields.join(', ')) + '">Updated: ' + esc(c.fields.slice(0, 2).join(', ')) + '</span>';
+}
+// jobs for a week from what is already saved on this device (no network)
+function cachedJobsForWeek(ws) {
+  const we = addDays(ws, 6); const ks = Array.from(new Set([ws.slice(0, 7), we.slice(0, 7)]));
+  if (ks.some(k => !sheetCache[k])) return null;
+  return ks.flatMap(k => sheetCache[k].jobs || []).filter(j => j.date >= ws && j.date <= we);
+}
+// does a saved invoice still match the run sheet for its week?
+function sheetMismatch(inv) {
+  if (!inv || !inv.weekStart || inv.importedFrom) return null;
+  const jobs = cachedJobsForWeek(inv.weekStart); if (!jobs) return null;
+  const ev = (inv.rows || []).find(isEvent); const have = ev ? num(ev.qty) : 0;
+  if (jobs.length === have) return null;
+  const ign = store.get('mmIgnore', {}); if (ign[inv.no] === jobs.length) return null;
+  return { ws: inv.weekStart, count: jobs.length, have, jobs };
+}
+function mismatchHTML(inv, mm) {
+  return '<p class="notice warn weekwarn"><span>The run sheet now shows <b>' + mm.count + ' job' + (mm.count === 1 ? '' : 's') + '</b> for ' + esc(weekLabel(mm.ws)) + ', but this invoice has <b>' + mm.have + ' event' + (mm.have === 1 ? '' : 's') + '</b>.' + (inv.paid ? ' It is already marked as paid.' : '') + '</span>' +
+    '<span class="actions"><button class="secondary" type="button" data-mmfix="' + esc(inv.no) + '">Update the invoice</button><button class="linkish" type="button" data-mmign="' + esc(inv.no) + '" data-mmc="' + mm.count + '">Keep it as it is</button></span></p>';
+}
+function wireMismatch() {
+  document.querySelectorAll('[data-mmfix]').forEach(b => b.addEventListener('click', () => { const inv = byNo(+b.dataset.mmfix); const mm = sheetMismatch(inv); if (!inv || !mm) return;
+    draft = clone(inv); draft.editing = inv.no; applyWeek(draft, mm.ws, mm.jobs.slice().sort((x, y) => x.date.localeCompare(y.date))); draft.weekLocked = true; go({ name: 'edit' }); }));
+  document.querySelectorAll('[data-mmign]').forEach(b => b.addEventListener('click', () => { const ign = store.get('mmIgnore', {}); ign[b.dataset.mmign] = +b.dataset.mmc; store.set('mmIgnore', ign); render(); }));
+}
+// a route plan remembers what the run sheet said when it was planned
+function planSig(jobs) { return jobs.filter(j => j.include).map(j => j.key + '~' + [j.booth, j.setup, j.pickup, j.addr].join('|')).sort().join('#'); }
+
+let lastSheetSync = 0, sheetSyncing = false;
+async function syncSheet() {
+  if (sheetSyncing || !sheetIdOf(sheetCfg.link) || !canReachGoogle || !navigator.onLine || shareToken) return;
+  sheetSyncing = true; freshChanges = [];
+  try {
+    const now = new Date(); const months = [[now.getFullYear(), now.getMonth()], [now.getFullYear(), now.getMonth() + 1]];
+    if (now.getDate() <= 10) months.unshift([now.getFullYear(), now.getMonth() - 1]);
+    const keys = [];
+    for (const [y0, m0] of months) { const d = new Date(y0, m0, 1); const r = await loadMonth(d.getFullYear(), d.getMonth(), true); if (r && !r.error) keys.push(r.key); }
+    lastSheetSync = Date.now();
+    // point the open pages at the fresh copy
+    [rs, ms, rt].forEach(st => { if (st.data && keys.includes(st.data.key) && sheetCache[st.data.key]) st.data = Object.assign({ key: st.data.key }, sheetCache[st.data.key]); });
+    if (freshChanges.length) {
+      if (rt.plan) rt.plan = null;
+      const busy = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+      if (!busy && ['runsheet', 'messages', 'route', 'dash', 'inv'].includes(route.name)) render();
+      showSheetToast(freshChanges);
+    }
+  } finally { sheetSyncing = false; }
+}
+function showSheetToast(ch) {
+  const nw = ch.filter(c => c.type === 'new'), cg = ch.filter(c => c.type === 'changed'), rm = ch.filter(c => c.type === 'removed');
+  const who = c => S((c.job.client || '').replace(/\s+/g, ' ').trim(), 40) + ' (' + dayLabel(c.job.date) + ')';
+  const lines = [];
+  if (nw.length) lines.push(nw.length + ' new booking' + (nw.length === 1 ? '' : 's') + ': ' + nw.slice(0, 3).map(who).join(', ') + (nw.length > 3 ? ' and more' : ''));
+  if (cg.length) lines.push(cg.length + ' changed: ' + cg.slice(0, 3).map(c => who(c) + ', ' + c.fields.slice(0, 2).join(' and ')).join('; '));
+  if (rm.length) lines.push(rm.length + ' removed: ' + rm.slice(0, 3).map(who).join(', '));
+  let t = $('sheetToast'); if (!t) { t = document.createElement('div'); t.id = 'sheetToast'; t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+  const first = (nw[0] || cg[0] || rm[0]).job;
+  t.innerHTML = '<b>Run sheet updated</b>' + lines.map(l => '<span>' + esc(l) + '</span>').join('') + '<div class="actions"><button class="primary" type="button" id="tView">Show me</button><button class="secondary" type="button" id="tClose">OK</button></div>';
+  t.hidden = false;
+  $('tClose').addEventListener('click', () => { t.hidden = true; });
+  $('tView').addEventListener('click', () => { t.hidden = true; const d = dateOf(first.date); rs.y = d.getFullYear(); rs.m = d.getMonth(); rs.week = mondayOf(first.date); rs.data = null; go({ name: 'runsheet' }); });
+}
+setTimeout(syncSheet, 2500);
+setInterval(() => { if (document.visibilityState === 'visible') syncSheet(); }, 120000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - lastSheetSync > 30000) syncSheet(); });
+window.addEventListener('online', () => setTimeout(syncSheet, 1000));
 
 /* ---------- password-protected share links ----------
    The invoice is encrypted in the browser (AES-GCM, key from the password with PBKDF2) and the result
