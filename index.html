@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-w+1wUikecg7LkVPEJ9jknLf28Q+kEsABLfhgFy3c/F0=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-gNb5WpHfRcruuXlsIQBXXCOAaNVOJwWTomQXOQc9Po8=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -254,6 +254,15 @@ a.navlink { display: inline-block; text-decoration: none; background: var(--pane
 .job .vh { color: var(--fg); }
 .iconpick { display: flex; flex-wrap: wrap; gap: 12px; } .iconopt { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; font-size: 13px; min-width: 110px; }
 .iconopt img { border-radius: 13px; } .iconopt input { margin: 0; } .iconopt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.kit { display: grid; grid-template-columns: minmax(0, 120px) minmax(0, 1fr); gap: 8px; }
+.kitbox { display: flex; flex-direction: column; gap: 3px; padding: 8px 12px; border-radius: 8px; background: var(--field); border: 1px solid var(--line); min-width: 0; }
+.kitbox span { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.kitbox b { font-size: 15px; display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; } .kitbox b.muted { color: var(--muted); font-weight: 500; font-size: 13px; }
+.kitbox.booth.printsy { background: var(--accent-soft); border-color: transparent; } .kitbox.booth.printsy b { color: var(--accent); letter-spacing: .04em; }
+.kitbox.booth.glam { background: #2a2116; border-color: #d4af37; } .kitbox.booth.glam span { color: #d9c48f; } .kitbox.booth.glam b { color: #f1d27a; letter-spacing: .06em; }
+.sw { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(0,0,0,.25); flex: none; display: inline-block; }
+.mskit, .rtkit { font-size: 13px; font-weight: 600; color: var(--accent); } .mskit { grid-column: 1; }
+@media (max-width: 400px) { .kit { grid-template-columns: 1fr; } }
 .syncline { display: flex; gap: 8px; align-items: center; margin: 0; }
 .sharepanel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); display: flex; flex-direction: column; gap: 10px; }
 .sharepanel p { margin: 0; font-size: 14px; }
@@ -1070,6 +1079,21 @@ function renderRunSheet() {
   if (!data && !rs.loading) fetchRs(false);
   if (data && rs.week && weeks.includes(rs.week)) ensureHours(shown.slice(0, 15), () => { if (route.name === 'runsheet') renderRunSheet(); });
 }
+
+// Booth type and backdrop, shown up front on every job.
+function swatch(b) { const t = String(b || '').toLowerCase(); const c = [];
+  if (/white/.test(t) && /gold/.test(t)) c.push('#f7f3ea', '#d4af37'); else if (/black/.test(t) && /gold/.test(t)) c.push('#1c1c1c', '#d4af37');
+  else { if (/silver/.test(t)) c.push('#c9ccd2'); if (/gold/.test(t)) c.push('#d4af37'); if (/white/.test(t)) c.push('#f7f7f5'); if (/black/.test(t)) c.push('#1c1c1c'); if (/rose|pink/.test(t)) c.push('#e8b4c0'); if (/flower|floral/.test(t)) c.push('#f2c6d4', '#9cc59a'); if (/green|greenery|hedge/.test(t)) c.push('#6f9a5b'); }
+  if (!c.length) c.push('#bdb7c4');
+  return c.length > 1 ? 'linear-gradient(135deg,' + c[0] + ' 0 50%,' + c[1] + ' 50% 100%)' : c[0]; }
+const prettyBackdrop = b => String(b || '').trim().toLowerCase().replace(/\s*-\s*/g, ' – ').replace(/\b\w/g, x => x.toUpperCase());
+function kitHTML(j) {
+  const style = String(j.style || '').trim(); const bd = String(j.backdrop || '').trim();
+  if (!style && !bd) return '';
+  return '<div class="kit">' + (style ? '<div class="kitbox booth ' + (/glam/i.test(style) ? 'glam' : /printsy/i.test(style) ? 'printsy' : '') + '"><span>Booth</span><b>' + esc(style.toUpperCase()) + '</b></div>' : '') +
+    (bd ? '<div class="kitbox"><span>Backdrop</span><b><i class="sw" style="background:' + swatch(bd) + '"></i>' + esc(prettyBackdrop(bd)) + '</b></div>' : '<div class="kitbox"><span>Backdrop</span><b class="muted">Not on the run sheet</b></div>') + '</div>';
+}
+const kitText = j => [String(j.style || '').trim().toUpperCase(), j.backdrop ? prettyBackdrop(j.backdrop) + ' backdrop' : ''].filter(Boolean).join(' · ');
 // Run sheet card: the time, client and venue first; tap the address for Google Maps and a number to call.
 const CHECK_RE = /please confirm|\?\?|\btbc\b|\btba\b|^note$|confirm/i;
 const DAYNAME = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -1079,15 +1103,15 @@ function jobCard(j) {
   const att = attendantHours(j); const br = boothRange(j.booth); const chk = needsCheck(j); const cs = contactsFor(j);
   const time = br ? hm(br.start) : (j.booth || 'Time not set'); const until = br ? hm(br.end).replace(' (next day)', '') : '';
   const fact = (k, v) => v ? '<div class="fact' + (CHECK_RE.test(String(v)) ? ' factwarn' : '') + '"><span>' + k + '</span><b>' + esc(v) + '</b></div>' : '';
-  const more = [['Backdrop', j.backdrop], ['Props', j.props], ['Floor plan', j.floorplan], ['Parking', j.parking], ['Album, glue & pen', j.album], ['Guests', j.guests], ['Notes', j.notes]].filter(x => x[1]);
+  const more = [['Props', j.props], ['Floor plan', j.floorplan], ['Parking', j.parking], ['Album, glue & pen', j.album], ['Guests', j.guests], ['Notes', j.notes]].filter(x => x[1]);
   const addr = [j.venue, j.address || j.suburb].filter(Boolean).join(' · ');
   return '<article class="job' + (att ? ' hasatt' : '') + (chk.length ? ' haschk' : '') + '">' +
     '<div class="jtime"><b>' + esc(time) + '</b>' + (until ? '<span>to ' + esc(until) + '</span>' : '') + '</div>' +
     '<div class="jmain">' +
       '<div class="jtop"><h4>' + esc((j.client || 'Client').replace(/\s+/g, ' ').trim()) + '</h4>' + changeBadge(j) + '</div>' +
-      '<div class="jtags">' + (j.event ? '<span class="tag">' + esc(j.event) + '</span>' : '') + (j.style ? '<span class="tag">' + esc(j.style) + '</span>' : '') +
-        (att ? '<span class="tag att">Attendant ' + fmtNum(att) + ' hrs</span>' : j.staffNote ? '<span class="tag">' + esc(j.staffNote) + '</span>' : '') +
+      '<div class="jtags">' + (j.event ? '<span class="tag">' + esc(j.event) + '</span>' : '') + (att ? '<span class="tag att">Attendant ' + fmtNum(att) + ' hrs</span>' : j.staffNote ? '<span class="tag">' + esc(j.staffNote) + '</span>' : '') +
         (chk.length ? '<span class="tag chk">Check: ' + esc(chk.join(', ')) + '</span>' : '') + '</div>' +
+      kitHTML(j) +
       (addr ? '<a class="jaddr" href="' + esc(mapsHref(j)) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg><span>' + esc(addr) + '</span></a>' : '') +
       (hoursFor(j) && !hoursFor(j).home ? '<p class="jhours">' + esc(hoursText(hoursFor(j), j.date)) + '</p>' : '') +
       '<div class="facts">' + fact('Set up from', j.setup) + fact('Guests arrive', j.arrival) + fact('Pick up', j.pickup) + '</div>' +
@@ -1711,7 +1735,7 @@ function msJobCard(j, k, tpls) {
   }
   return '<article class="msjob' + (open ? ' open' : '') + '"><button class="mshead" type="button" data-job="' + esc(jobKey(j)) + '" aria-expanded="' + open + '">' +
     '<span class="mstime">' + esc((j.booth || 'Time not set').replace(/\s+/g, ' ')) + '</span><span class="msname">' + esc((j.client || 'Client').replace(/\s+/g, ' ')) + (j.event ? ' · ' + esc(j.event) : '') + '</span>' +
-    '<span class="msvenue">' + esc(j.venue || j.suburb || '') + (j.setup ? ' · set up ' + esc(j.setup) : '') + '</span>' + (changeBadge(j) ? '<span class="msbadge">' + changeBadge(j) + '</span>' : '') +
+    '<span class="msvenue">' + esc(j.venue || j.suburb || '') + (j.setup ? ' · set up ' + esc(j.setup) : '') + '</span>' + (kitText(j) ? '<span class="mskit">' + esc(kitText(j)) + '</span>' : '') + (changeBadge(j) ? '<span class="msbadge">' + changeBadge(j) + '</span>' : '') +
     (sent.length ? '<span class="pill paid">' + sent.length + ' sent · last: ' + esc(sent[sent.length - 1].tpl) + '</span>' : '<span class="pill neutral">No messages yet</span>') + '</button>' + body + '</article>';
 }
 function tplEditor(tpls) {
@@ -2004,7 +2028,7 @@ function loadPlan(date, jobs) {
   const p = Object.assign(base, saved || {});
   const prevJobs = new Map((p.jobs || []).map(j => [j.key, j]));
   p.jobs = jobs.map(j => { const key = jobKey(j); const old = prevJobs.get(key) || {};
-    return { key, home: isHomeJob(j), client: (j.client || 'Client').replace(/\s+/g, ' '), venue: (j.venue || '').replace(/\s+/g, ' '), suburb: j.suburb, booth: j.booth, setup: j.setup, pickup: j.pickup,
+    return { key, kit: kitText(j), home: isHomeJob(j), client: (j.client || 'Client').replace(/\s+/g, ' '), venue: (j.venue || '').replace(/\s+/g, ' '), suburb: j.suburb, booth: j.booth, setup: j.setup, pickup: j.pickup,
       addr: old.addr || jobAddress(j), include: old.include !== false, stay: old.stay != null ? old.stay : attendantHours(j) > 0 && /full/i.test(j.staffNote || '') }; });
   return p;
 }
@@ -2113,7 +2137,7 @@ function renderRoute() {
     '<section class="card"><h2>Jobs this day</h2><div class="rtjobs">' + p.jobs.map((j, i) => {
       const br = boothRange(j.booth);
       return '<div class="rtjob' + (j.include ? '' : ' off') + '"><label class="check"><input type="checkbox" data-inc="' + i + '"' + (j.include ? ' checked' : '') + '> <b>' + esc(j.client) + '</b> ' + (sheetChanges[j.key] ? (sheetChanges[j.key].type === 'new' ? '<span class="pill newpill">New booking</span>' : '<span class="pill chgpill">Updated</span>') : '') + '</label>' +
-        '<span class="rtmeta">Booth ' + esc(j.booth || 'time not set') + ' · earliest set-up ' + esc(j.setup || 'not set') + (j.pickup ? ' · pick up ' + esc(j.pickup) : '') + '</span>' +
+        (j.kit ? '<span class="rtkit">' + esc(j.kit) + '</span>' : '') + '<span class="rtmeta">Booth ' + esc(j.booth || 'time not set') + ' · earliest set-up ' + esc(j.setup || 'not set') + (j.pickup ? ' · pick up ' + esc(j.pickup) : '') + '</span>' +
         '<label class="f">Address<input type="text" data-addr="' + i + '" value="' + esc(j.addr) + '"></label>' +
         '<div class="vhours"><span>' + esc(hoursText(hoursForPJ(j), rt.date)) + '</span>' + (j.home ? '' : ' <button class="linkish" type="button" data-vh="' + i + '">Change</button>') + '</div><div id="vhEdit' + i + '"></div>' +
         '<label class="check"><input type="checkbox" data-stay="' + i + '"' + (j.stay ? ' checked' : '') + '> I stay for the whole event' + (br ? ' (until ' + esc(hm(br.end)) + ')' : '') + '</label></div>'; }).join('') + '</div>' +
