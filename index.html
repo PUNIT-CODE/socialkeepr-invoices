@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-quDgxhgCKGerLA/jWCeLFP4iwtlY3TsbLGzNPokvPeE=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-G7MA+x2m+34nQspErRvh3fDvz2mlxFd2AFI0gdosrBM=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -149,14 +149,31 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 .wchip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
 .wchip .tag { font-size: 11px; color: var(--accent); font-weight: 600; margin-left: 4px; }
 .tileact { justify-content: space-between; } .tileact .primary { padding: 9px 14px; align-self: flex-start; }
-.dayblock h3 { font-size: 15px; margin: 6px 0 10px; } .dayblock h3 span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 6px; }
-.jobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; }
-.job { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.job header { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.job header b { font-family: var(--font-num); font-size: 14px; margin-right: auto; }
-.job .jt { margin: 0; font-weight: 600; } .job .jv { margin: 0; color: var(--muted); font-size: 13px; }
-.job dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 4px 0 0; font-size: 13px; }
-.job dl div { display: contents; } .job dt { color: var(--muted); } .job dd { margin: 0; overflow-wrap: anywhere; }
+.dayblock { display: flex; flex-direction: column; gap: 10px; }
+.dayblock h3 { display: flex; align-items: baseline; gap: 8px; font-size: 18px; margin: 14px 0 0; padding-bottom: 8px; border-bottom: 2px solid var(--line); }
+.dayblock h3 .dname { color: var(--accent); }
+.dayblock h3 .dcount { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--muted); }
+.jobs { display: flex; flex-direction: column; gap: 12px; }
+.job { display: grid; grid-template-columns: 96px minmax(0, 1fr); background: var(--panel); border: 1px solid var(--line); border-left: 5px solid var(--line); border-radius: 12px; overflow: hidden; }
+.job.hasatt { border-left-color: var(--accent); } .job.haschk { border-left-color: var(--warn); }
+.jtime { padding: 16px 12px; background: var(--field); display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--line); }
+.jtime b { font-size: 19px; font-variant-numeric: tabular-nums; line-height: 1.1; } .jtime span { font-size: 13px; color: var(--muted); }
+.jmain { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.jtop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .jtop h4 { margin: 0; font-size: 17px; }
+.jtags { display: flex; flex-wrap: wrap; gap: 6px; } .tag { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--field); border: 1px solid var(--line); color: var(--muted); }
+.tag.att { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600; } .tag.chk { background: var(--warn-soft); border-color: transparent; color: var(--warn); font-weight: 600; }
+.jaddr { display: flex; gap: 6px; align-items: flex-start; color: var(--fg); text-decoration: none; font-size: 14px; line-height: 1.35; padding: 8px 10px; border-radius: 8px; background: var(--field); border: 1px solid var(--line); }
+.jaddr svg { color: var(--accent); flex: none; margin-top: 1px; } .jaddr span { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; } .jaddr:hover { border-color: var(--accent); }
+.jhours { margin: -4px 0 0; font-size: 12px; color: var(--muted); }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.fact { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); } .fact span { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); } .fact b { font-size: 14px; overflow-wrap: anywhere; }
+.fact.factwarn { border-color: var(--warn); background: var(--warn-soft); } .fact.factwarn b { color: var(--warn); }
+.jcalls { display: flex; flex-wrap: wrap; gap: 8px; }
+.callbtn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--accent-ink); background: var(--accent); border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 14px; }
+.callbtn small { font-weight: 400; opacity: .85; font-size: 13px; } .callbtn:hover { filter: brightness(1.08); }
+.jmore summary { cursor: pointer; font-size: 13px; color: var(--accent); list-style-position: inside; }
+.jmore dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 10px 0 0; font-size: 13px; } .jmore dl div { display: contents; } .jmore dt { color: var(--muted); } .jmore dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 520px) { .job { grid-template-columns: 1fr; } .jtime { flex-direction: row; align-items: baseline; gap: 8px; border-right: 0; border-bottom: 1px solid var(--line); padding: 10px 14px; } }
 .pill.neutral { background: var(--field); color: var(--muted); border: 1px solid var(--line); } .pill.att { background: var(--accent-soft); color: var(--accent); }
 .filebtn { display: inline-block; cursor: pointer; }
 .rcptbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
@@ -1032,7 +1049,7 @@ function renderRunSheet() {
       '<div class="tile"><span class="k">Attendant hours</span><span class="v">' + fmtNum(sum.attHours) + ' hrs</span><span class="sub">' + sum.att.length + ' job' + (sum.att.length === 1 ? '' : 's') + ' with an attendant</span></div>' +
       (rs.week && weeks.includes(rs.week) && shown.length ? '<div class="tile tileact"><span class="k">Invoice for this week</span><button class="primary" type="button" id="rsInvoice">Make invoice</button><span class="sub">Fills in ' + sum.count + ' events' + (sum.attHours ? ' and ' + fmtNum(sum.attHours) + ' attendant hrs' : '') + '</span></div>' : '') + '</div>' +
     (rs.loading && !data ? '<p class="empty">Loading the run sheet…</p>' : !shown.length ? '<section class="card"><p class="empty">' + (data && !prob ? 'No jobs on the run sheet for this ' + (rs.week && weeks.includes(rs.week) ? 'week' : 'month') + '.' : 'Nothing to show yet.') + '</p></section>' :
-      Object.keys(byDay).sort().map(day => '<section class="dayblock"><h3>' + esc(dayLabel(day)) + ' <span>' + byDay[day].length + ' job' + (byDay[day].length === 1 ? '' : 's') + '</span></h3><div class="jobs">' + byDay[day].map(jobCard).join('') + '</div></section>').join('')) +
+      Object.keys(byDay).sort().map(day => dayBlock(day, byDay[day])).join('')) +
     '<section class="card"><h2>Where the run sheet comes from</h2>' +
       (canReachGoogle ? '<div class="fields"><label class="f" style="grid-column:1/-1">Google Sheet link<input id="rsLink" type="url" placeholder="https://docs.google.com/spreadsheets/d/…" value="' + esc(sheetCfg.link) + '"></label></div>' +
         '<div class="actions" style="margin-top:10px"><button class="secondary" type="button" id="rsSave">Save link</button></div>' +
@@ -1050,13 +1067,35 @@ function renderRunSheet() {
   if (!data && !rs.loading) fetchRs(false);
   if (data && rs.week && weeks.includes(rs.week)) ensureHours(shown.slice(0, 15), () => { if (route.name === 'runsheet') renderRunSheet(); });
 }
+// Run sheet card: the time, client and venue first; tap the address for Google Maps and a number to call.
+const CHECK_RE = /please confirm|\?\?|\btbc\b|\btba\b|^note$|confirm/i;
+const DAYNAME = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function needsCheck(j) { return [['set-up time', j.setup], ['pick-up', j.pickup], ['guest arrival', j.arrival], ['notes', j.notes], ['contact', j.contact2]].filter(([, v]) => v && CHECK_RE.test(String(v).trim())).map(x => x[0]); }
+function mapsHref(j) { let q = [j.venue, j.address || j.suburb].filter(Boolean).join(', ').replace(/^home,?\s*/i, ''); if (!/\b(vic|victoria)\b/i.test(q)) q += ', VIC'; return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q); }
 function jobCard(j) {
-  const att = attendantHours(j);
-  const line = (k, v) => v ? '<div><dt>' + k + '</dt><dd>' + esc(v) + '</dd></div>' : '';
-  return '<article class="job"><header><b>' + esc(j.booth || 'Time not set') + '</b>' + (j.style ? '<span class="pill neutral">' + esc(j.style) + '</span>' : '') + changeBadge(j) + (att ? '<span class="pill att">Attendant ' + fmtNum(att) + ' hrs</span>' : (j.staffNote ? '<span class="pill neutral">' + esc(j.staffNote) + '</span>' : '')) + '</header>' +
-    '<p class="jt">' + esc(j.client || 'Client') + (j.event ? ' · ' + esc(j.event) : '') + '</p>' +
-    '<p class="jv">' + esc([j.venue, j.address || j.suburb].filter(Boolean).join(', ')) + '</p>' + (hoursFor(j) ? '<p class="jv vh">' + esc(hoursText(hoursFor(j), j.date)) + '</p>' : '') +
-    '<dl>' + line('Set up', j.setup) + line('Guests arrive', j.arrival) + line('Pick up', j.pickup) + line('Backdrop', j.backdrop) + line('Phone', j.phone) + line('Contact', j.contact2) + line('Parking', j.parking) + line('Album', j.album) + line('Props', j.props) + line('Notes', [j.floorplan, j.notes].filter(Boolean).join(' · ')) + '</dl></article>';
+  const att = attendantHours(j); const br = boothRange(j.booth); const chk = needsCheck(j); const cs = contactsFor(j);
+  const time = br ? hm(br.start) : (j.booth || 'Time not set'); const until = br ? hm(br.end).replace(' (next day)', '') : '';
+  const fact = (k, v) => v ? '<div class="fact' + (CHECK_RE.test(String(v)) ? ' factwarn' : '') + '"><span>' + k + '</span><b>' + esc(v) + '</b></div>' : '';
+  const more = [['Backdrop', j.backdrop], ['Props', j.props], ['Floor plan', j.floorplan], ['Parking', j.parking], ['Album, glue & pen', j.album], ['Guests', j.guests], ['Notes', j.notes]].filter(x => x[1]);
+  const addr = [j.venue, j.address || j.suburb].filter(Boolean).join(' · ');
+  return '<article class="job' + (att ? ' hasatt' : '') + (chk.length ? ' haschk' : '') + '">' +
+    '<div class="jtime"><b>' + esc(time) + '</b>' + (until ? '<span>to ' + esc(until) + '</span>' : '') + '</div>' +
+    '<div class="jmain">' +
+      '<div class="jtop"><h4>' + esc((j.client || 'Client').replace(/\s+/g, ' ').trim()) + '</h4>' + changeBadge(j) + '</div>' +
+      '<div class="jtags">' + (j.event ? '<span class="tag">' + esc(j.event) + '</span>' : '') + (j.style ? '<span class="tag">' + esc(j.style) + '</span>' : '') +
+        (att ? '<span class="tag att">Attendant ' + fmtNum(att) + ' hrs</span>' : j.staffNote ? '<span class="tag">' + esc(j.staffNote) + '</span>' : '') +
+        (chk.length ? '<span class="tag chk">Check: ' + esc(chk.join(', ')) + '</span>' : '') + '</div>' +
+      (addr ? '<a class="jaddr" href="' + esc(mapsHref(j)) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg><span>' + esc(addr) + '</span></a>' : '') +
+      (hoursFor(j) && !hoursFor(j).home ? '<p class="jhours">' + esc(hoursText(hoursFor(j), j.date)) + '</p>' : '') +
+      '<div class="facts">' + fact('Set up from', j.setup) + fact('Guests arrive', j.arrival) + fact('Pick up', j.pickup) + '</div>' +
+      (cs.length ? '<div class="jcalls">' + cs.map(c => '<a class="callbtn" href="tel:' + esc(c.num) + '"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg><span>Call ' + esc(c.who) + '</span><small>' + esc(showPhone(c.num)) + '</small></a>').join('') + '</div>' : (j.phone ? '<p class="jhours">Phone: ' + esc(j.phone) + '</p>' : '')) +
+      (more.length ? '<details class="jmore"><summary>More details (' + more.map(x => x[0].split(',')[0].toLowerCase()).slice(0, 3).join(', ') + (more.length > 3 ? '…' : '') + ')</summary><dl>' + more.map(([k, v]) => '<div><dt>' + k + '</dt><dd>' + esc(v) + '</dd></div>').join('') + '</dl></details>' : '') +
+    '</div></article>';
+}
+function dayBlock(day, list) {
+  const d = dateOf(day); const isToday = day === todayISO();
+  return '<section class="dayblock"><h3><span class="dname">' + (isToday ? 'Today · ' : '') + DAYNAME[d.getDay()] + '</span> ' + d.getDate() + ' ' + MONTH_FULL[d.getMonth()] + '<span class="dcount">' + list.length + ' job' + (list.length === 1 ? '' : 's') + '</span></h3>' +
+    '<div class="jobs">' + list.slice().sort((a, b) => ((boothRange(a.booth) || {}).start || 0) - ((boothRange(b.booth) || {}).start || 0)).map(jobCard).join('') + '</div></section>';
 }
 async function fetchRs(force) {
   const y = rs.y, m = rs.m; rs.loading = true; if (route.name === 'runsheet') renderRunSheet();
