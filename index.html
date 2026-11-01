@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-E8UusNxeu5ZKqliUrykd4xgS627GzAtOpO0TzMqP2CM=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-yNAg5CBM223Oforu0HMb+CK8ZrsaVlqMvdZFj8fxUMA=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -1011,18 +1011,37 @@ function jobsFromGrid(grid) {
   return jobs;
 }
 const sheetCfg = Object.assign({ link: (typeof DEFAULT_SHEET === 'string' ? DEFAULT_SHEET : '') }, store.get('sheet', {}));
-const sheetIdOf = link => { const m = String(link || '').match(/\/d\/([a-zA-Z0-9_-]{20,})/) || String(link || '').match(/^([a-zA-Z0-9_-]{30,})$/); return m ? m[1] : ''; };
+const sheetIdOf = link => { const m = String(link || '').trim().match(/\/d\/(?:e\/)?([a-zA-Z0-9_-]{20,})/) || String(link || '').match(/^([a-zA-Z0-9_-]{30,})$/); return m ? m[1] : ''; };
 // Month tabs are named like OCT26, NOV26 (month + two-digit year); older styles are tried after that.
 const tabNames = (y, m) => { const ab = MONTHS[m].toUpperCase(), yy = String(y).slice(-2), full = MONTH_FULL[m].toUpperCase(), alt = m === 8 ? 'SEPT' : ab;
   return Array.from(new Set([ab + yy, alt + yy, ab + ' ' + yy, ab + '-' + yy, MONTHS[m] + yy, full + yy, ab + y, ab + ' ' + y, full + ' ' + y, MONTH_FULL[m] + ' ' + y, ab, alt, full, MONTHS[m], MONTH_FULL[m]])); };
 const canReachGoogle = !window.claude; // the private Claude version cannot load Google pages
 let gvizN = 0;
-function gvizGrid(id, tab) {
+// Google's reply for a sheet tab, as rows of text (first row = column labels)
+function gvizToGrid(resp) {
+  if (!resp || resp.status === 'error') throw Object.assign(new Error((resp && resp.errors && resp.errors[0] && (resp.errors[0].detailed_message || resp.errors[0].message)) || 'sheet error'), { code: 'sheet' });
+  const tb = resp.table || { cols: [], rows: [] };
+  const val = c => { if (!c) return ''; if (c.f != null) return String(c.f); const v = c.v; if (typeof v === 'string') { const m = v.match(/^Date\((\d+),(\d+),(\d+)/); return m ? isoOf(new Date(+m[1], +m[2], +m[3])) : v; } return v == null ? '' : String(v); };
+  return [tb.cols.map(c => c.label || '')].concat(tb.rows.map(r => (r.c || []).map(val)));
+}
+// Read one tab: a direct request first (works on iPhone and Android), the older script method as a backup.
+async function gvizGrid(id, tab) {
+  const url = 'https://docs.google.com/spreadsheets/d/' + id + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(tab) + '&_=' + Date.now();
+  let res;
+  try { res = await fetch(url, { credentials: 'omit', referrerPolicy: 'strict-origin-when-cross-origin', cache: 'no-store' }); }
+  catch (e) { if (!navigator.onLine) throw new Error('offline'); return gvizGridScript(id, tab); }
+  const text = await res.text().catch(() => '');
+  if (/setResponse\s*\(|^\s*\{/.test(text.slice(0, 200))) { const a = text.indexOf('{'), b = text.lastIndexOf('}'); return gvizToGrid(JSON.parse(text.slice(a, b + 1))); }
+  if (res.status === 401 || res.status === 403 || /accounts\.google\.com|ServiceLogin|<html/i.test(text.slice(0, 2000))) throw new Error('private');
+  if (res.status === 404) throw new Error('notfound');
+  return gvizGridScript(id, tab);
+}
+function gvizGridScript(id, tab) {
   return new Promise((resolve, reject) => {
     const cb = '__skGviz' + (++gvizN); const sc = document.createElement('script'); let done = false;
     const finish = (fn, v) => { if (done) return; done = true; clearTimeout(t); delete window[cb]; sc.remove(); fn(v); };
     window[cb] = resp => {
-      if (!resp || resp.status === 'error') return finish(reject, new Error((resp && resp.errors && resp.errors[0] && (resp.errors[0].detailed_message || resp.errors[0].message)) || 'sheet error'));
+      try { finish(resolve, gvizToGrid(resp)); } catch (e) { finish(reject, e); } return;
       const tb = resp.table || { cols: [], rows: [] };
       const val = c => { if (!c) return ''; if (c.f != null) return String(c.f); const v = c.v; if (typeof v === 'string') { const m = v.match(/^Date\((\d+),(\d+),(\d+)/); return m ? isoOf(new Date(+m[1], +m[2], +m[3])) : v; } return v == null ? '' : String(v); };
       const grid = [tb.cols.map(c => c.label || '')].concat(tb.rows.map(r => (r.c || []).map(val)));
@@ -1077,7 +1096,10 @@ function sheetProblem(res) {
   if (r.missing === 'private') return 'This private Claude version cannot open Google Sheets. Use the website, or upload the sheet on the Run sheet page.';
   if (r.notab) return 'Could not find a ' + MONTHS[+r.key.slice(5) - 1].toUpperCase() + r.key.slice(2, 4) + ' tab in the run sheet (or it has no jobs yet).';
   if (r.stale) return 'Could not reach the sheet, so this uses the copy saved ' + ago(r.at) + '.';
-  if (r.error === 'blocked' || r.error === 'timeout') return 'Could not open the sheet. Check your internet, and that the sheet is shared as "Anyone with the link can view".';
+  if (r.error === 'private') return 'Google says this sheet is not public. In Google Sheets tap Share, then under General access choose "Anyone with the link" and "Viewer".';
+  if (r.error === 'notfound') return 'Google could not find a sheet with that link. Copy the link again from the address bar of the sheet and paste it on the Run sheet page.';
+  if (r.error === 'offline') return 'No internet connection. The run sheet will load when you are back online.';
+  if (r.error === 'blocked' || r.error === 'timeout') return 'Could not open the sheet (' + r.error + '). Check your internet, and that the sheet is shared as "Anyone with the link can view".';
   return 'The sheet could not be read (' + r.error + ').';
 }
 function ago(t) { if (!t) return ''; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; }
@@ -1125,7 +1147,7 @@ function renderRunSheet() {
   if ($('rsRefresh')) $('rsRefresh').addEventListener('click', () => fetchRs(true));
   document.querySelectorAll('.wchip').forEach(b => b.addEventListener('click', () => { rs.week = b.dataset.w || null; renderRunSheet(); }));
   if ($('rsInvoice')) $('rsInvoice').addEventListener('click', () => { draft = freshDraft(); draft.date = todayISO(); applyWeek(draft, rs.week, shown); store.set('draft', draft); go({ name: 'edit' }); });
-  if ($('rsSave')) $('rsSave').addEventListener('click', () => { const v = $('rsLink').value.trim(); if (v && !sheetIdOf(v)) { say('That does not look like a Google Sheets link.', 'bad'); return; } sheetCfg.link = v; store.set('sheet', { link: v }); saveSettings(); rs.msg = { text: v ? 'Link saved.' : 'Link removed.', kind: 'ok' }; fetchRs(true); });
+  if ($('rsSave')) $('rsSave').addEventListener('click', () => { const v = $('rsLink').value.trim(); if (v && !sheetIdOf(v)) { say('That does not look like a Google Sheets link.', 'bad'); return; } sheetCfg.link = v; store.set('sheet', { link: v }); saveSettings(); rs.msg = { text: v ? 'Link saved. Checking the sheet…' : 'Link removed.', kind: 'ok' }; fetchRs(true).then(() => { if (!v || !rs.data) return; const pr = sheetProblem([rs.data]); rs.msg = pr ? { text: pr, kind: 'bad' } : { text: 'Connected: found ' + (rs.data.jobs || []).length + ' jobs in ' + (rs.data.src || 'the sheet').replace('Google Sheet, ', '') + '.', kind: 'ok' }; if (route.name === 'runsheet') renderRunSheet(); }); });
   $('rsFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) uploadSheet(f); });
   if (!data && !rs.loading) fetchRs(false);
   if (data && rs.week && weeks.includes(rs.week)) ensureHours(shown.slice(0, 15), () => { if (route.name === 'runsheet') renderRunSheet(); });
