@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-gNb5WpHfRcruuXlsIQBXXCOAaNVOJwWTomQXOQc9Po8=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-E8UusNxeu5ZKqliUrykd4xgS627GzAtOpO0TzMqP2CM=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -37,6 +37,7 @@
   --warn: #9a5b00;
   --warn-soft: #fbefd9;
   --grid: #ebe7ee;
+  --pack: #0f7c80;
   --paper: #ffffff;
   --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -45,13 +46,13 @@
   :root:not([data-theme="light"]) {
     --bg: #17131a; --panel: #211c25; --side: #1c1720; --fg: #efe9f2; --muted: #a79fae; --line: #362f3c;
     --field: #1b171f; --accent: #f05bb8; --accent-ink: #1a0d15; --accent-soft: #3a1d30;
-    --good: #5fd39a; --good-soft: #173528; --warn: #f0b860; --warn-soft: #3a2c14; --grid: #2c2631; color-scheme: dark;
+    --good: #5fd39a; --good-soft: #173528; --warn: #f0b860; --warn-soft: #3a2c14; --grid: #2c2631; --pack: #45c3c5; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #17131a; --panel: #211c25; --side: #1c1720; --fg: #efe9f2; --muted: #a79fae; --line: #362f3c;
   --field: #1b171f; --accent: #f05bb8; --accent-ink: #1a0d15; --accent-soft: #3a1d30;
-  --good: #5fd39a; --good-soft: #173528; --warn: #f0b860; --warn-soft: #3a2c14; --grid: #2c2631; color-scheme: dark;
+  --good: #5fd39a; --good-soft: #173528; --warn: #f0b860; --warn-soft: #3a2c14; --grid: #2c2631; --pack: #45c3c5; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 15px; line-height: 1.45; }
@@ -263,6 +264,56 @@ a.navlink { display: inline-block; text-decoration: none; background: var(--pane
 .sw { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(0,0,0,.25); flex: none; display: inline-block; }
 .mskit, .rtkit { font-size: 13px; font-weight: 600; color: var(--accent); } .mskit { grid-column: 1; }
 @media (max-width: 400px) { .kit { grid-template-columns: 1fr; } }
+
+/* route planner */
+.planbar { display: flex; flex-direction: column; gap: 10px; }
+.pbrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end; }
+.pbgo { height: 44px; } .pbrow .f input, .pbrow .f select { height: 44px; } .pbinfo { margin: 0; font-size: 13px; color: var(--muted); }
+details.card > summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+details.card > summary::-webkit-details-marker { display: none; }
+details.card > summary::before { content: '▸'; color: var(--accent); transition: transform .15s; display: inline-block; }
+details.card[open] > summary::before { transform: rotate(90deg); }
+details.card > summary b { font-size: 15px; } details.card > summary span { color: var(--fg); font-size: 14px; } details.card > summary em { font-style: normal; font-size: 13px; color: var(--muted); margin-left: auto; }
+details.card[open] > summary { margin-bottom: 14px; } .setinner { display: flex; flex-direction: column; }
+.rjtop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; } .rjtime { font-family: var(--font-num); font-size: 13px; color: var(--muted); }
+.rjfoot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: center; }
+.rsum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.rsum > div { padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; border-left: 1px solid var(--line); min-width: 0; } .rsum > div:first-child { border-left: 0; }
+.rsum span { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); } .rsum b { font-size: 20px; font-family: var(--font-num); font-variant-numeric: tabular-nums; } .rsum small { font-size: 12px; color: var(--muted); }
+.rsum .good b { color: var(--good); } .rsum .bad b { color: var(--warn); }
+@media (max-width: 640px) { .rsum { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rsum > div:nth-child(3) { border-left: 0; } .rsum > div:nth-child(n+3) { border-top: 1px solid var(--line); } }
+.rtlayout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (min-width: 1150px) { .rtlayout { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); } .rtmapcard { position: sticky; top: 16px; order: 2; } .rttimecard { order: 1; } }
+.rtmapcard { padding: 12px; } .maphead { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0 4px 10px; flex-wrap: wrap; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.lg::before { content: ''; display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.lg.setup::before { background: var(--accent); } .lg.pack::before { background: var(--pack); } .lg.home::before { background: repeating-linear-gradient(90deg, var(--muted) 0 3px, transparent 3px 6px); }
+.rtmap { height: 460px; border-radius: 10px; border: 1px solid var(--line); overflow: hidden; background: var(--field); margin: 0; }
+@media (max-width: 640px) { .rtmap { height: 320px; } }
+.rtmap .leaflet-tile-pane { filter: saturate(.45) contrast(.95) brightness(1.04); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .rtmap .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.88) saturate(.35); } }
+:root[data-theme="dark"] .rtmap .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.88) saturate(.35); }
+.rtmap.leaflet-container { background: var(--field); font-family: var(--font-ui); }
+.rtmap .leaflet-popup-content-wrapper, .rtmap .leaflet-popup-tip { background: var(--panel); color: var(--fg); }
+.rtmap .leaflet-control-zoom a { background: var(--panel); color: var(--fg); border-color: var(--line); }
+.rtmap .leaflet-control-attribution { background: color-mix(in srgb, var(--panel) 80%, transparent); color: var(--muted); }
+.mpop { display: flex; flex-direction: column; gap: 3px; font-size: 13px; } .mpop b { font-size: 14px; } .mpop a { color: var(--accent); margin-top: 4px; }
+.mpin { background: none; border: 0; }
+.mpin-b { height: 30px; min-width: 30px; padding: 0 8px; border-radius: 15px; display: flex; align-items: center; justify-content: center; gap: 2px; font: 700 13px var(--font-ui); color: #fff; background: var(--accent); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.35); position: relative; }
+.mpin-b::after { content: ''; position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #fff; border-bottom: 0; }
+.mpin.pack .mpin-b { background: var(--pack); } .mpin.both .mpin-b { background: linear-gradient(90deg, var(--accent) 50%, var(--pack) 50%); } .mpin.extra .mpin-b { background: var(--muted); }
+.mpin.home .mpin-b { background: var(--fg); color: var(--bg); padding: 0; } .mpin.late .mpin-b { box-shadow: 0 0 0 3px var(--warn), 0 2px 6px rgba(0,0,0,.35); } .mpin.done .mpin-b { opacity: .55; }
+.mapacts { margin: 12px 4px 4px; }
+.tlbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; } .tlbar h2 { margin: 0; }
+button.secondary.small { padding: 8px 12px; font-size: 13px; }
+.legtxt { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tl.stop.kind-pack > div { border-left-color: var(--pack); } .tl.stop.kind-pack .stopno { background: var(--pack); } .tl.stop.kind-extra > div { border-left-color: var(--muted); } .tl.stop.kind-extra .stopno { background: var(--muted); }
+button.stopno { border: 0; cursor: pointer; padding: 0; font: inherit; font-size: 12px; font-weight: 700; } button.stopno:hover { transform: scale(1.12); }
+.stopkit { margin: 4px 0 0; font-size: 13px; font-weight: 600; color: var(--accent); }
+.stopnav { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.navbtn2 { font-size: 13px; text-decoration: none; padding: 6px 12px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; } .navbtn2.alt { background: var(--panel); color: var(--fg); border: 1px solid var(--line); }
+.nextcard { border-color: var(--accent); background: var(--accent-soft); } .nextcard .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); font-weight: 700; }
+.nxrow { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; margin-top: 4px; } .nxrow p { margin: 2px 0 0; font-size: 14px; color: var(--muted); } .nxbtns { display: flex; gap: 8px; }
 .syncline { display: flex; gap: 8px; align-items: center; margin: 0; }
 .sharepanel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); display: flex; flex-direction: column; gap: 10px; }
 .sharepanel p { margin: 0; font-size: 14px; }
@@ -2126,61 +2177,83 @@ function renderRoute() {
   if (data && (!rt.plan || rt.plan.date !== rt.date)) rt.plan = loadPlan(rt.date, jobs);
   const p = rt.plan && rt.plan.date === rt.date ? rt.plan : null;
   const c = rtCfg(); const prob = data ? sheetProblem([data]) : '';
-  const homeOpts = (sel, which) => c.homes.map((h, i) => '<option value="' + i + '"' + (sel === i ? ' selected' : '') + '>' + esc(h.label || h.addr) + '</option>').join('') + '<option value="-2"' + (sel === -2 ? ' selected' : '') + '>Another address…</option>';
+  const homeOpts = sel => c.homes.map((h, i) => '<option value="' + i + '"' + (sel === i ? ' selected' : '') + '>' + esc(h.label || h.addr) + '</option>').join('') + '<option value="-2"' + (sel === -2 ? ' selected' : '') + '>Another address…</option>';
   const r = p && p.result;
+  const settingsOpen = rt.setOpen != null ? rt.setOpen : !c.homes.some(h => h.addr);
+  if (rt.setOpen == null && settingsOpen) rt.setOpen = true; // stays open while home addresses are being added
+  const jobsOpen = rt.jobsOpen != null ? rt.jobsOpen : !r;
+  const nInc = p ? p.jobs.filter(j => j.include).length : 0;
   $('view').innerHTML =
-    '<div class="pagehead"><div><h1>Route planner</h1><p>Your jobs for the day in the best order, with driving times from Google Maps traffic.</p></div>' +
+    '<div class="pagehead"><div><h1>Route planner</h1><p>The best order for the day’s set-ups and pack-downs, with driving times and traffic.</p></div>' +
     '<div class="actions"><button class="secondary" type="button" id="rtPrev" aria-label="Previous day">‹</button><b class="monthname">' + esc(rt.date === todayISO() ? 'Today, ' : '') + esc(dayLabel(rt.date)) + '</b><button class="secondary" type="button" id="rtNext" aria-label="Next day">›</button>' + (rt.date !== todayISO() ? '<button class="secondary" type="button" id="rtToday">Today</button>' : '') + '</div></div>' +
     (prob ? '<p class="notice warn">' + esc(prob) + '</p>' : '') +
-    (!mapsKey() ? '<p class="notice">Driving times use free maps with estimated traffic. For live traffic, add a working Google Maps key under "Route settings".</p>' : '') +
     (rt.loading && !data ? '<p class="empty">Loading the run sheet…</p>' : !p || !p.jobs.length ? '<section class="card"><p class="empty">' + (data && !prob ? 'No jobs on the run sheet for ' + esc(dayLabel(rt.date)) + '.' : 'Nothing to plan yet.') + '</p></section>' :
-    '<section class="card"><h2>Jobs this day</h2><div class="rtjobs">' + p.jobs.map((j, i) => {
-      const br = boothRange(j.booth);
-      return '<div class="rtjob' + (j.include ? '' : ' off') + '"><label class="check"><input type="checkbox" data-inc="' + i + '"' + (j.include ? ' checked' : '') + '> <b>' + esc(j.client) + '</b> ' + (sheetChanges[j.key] ? (sheetChanges[j.key].type === 'new' ? '<span class="pill newpill">New booking</span>' : '<span class="pill chgpill">Updated</span>') : '') + '</label>' +
-        (j.kit ? '<span class="rtkit">' + esc(j.kit) + '</span>' : '') + '<span class="rtmeta">Booth ' + esc(j.booth || 'time not set') + ' · earliest set-up ' + esc(j.setup || 'not set') + (j.pickup ? ' · pick up ' + esc(j.pickup) : '') + '</span>' +
-        '<label class="f">Address<input type="text" data-addr="' + i + '" value="' + esc(j.addr) + '"></label>' +
-        '<div class="vhours"><span>' + esc(hoursText(hoursForPJ(j), rt.date)) + '</span>' + (j.home ? '' : ' <button class="linkish" type="button" data-vh="' + i + '">Change</button>') + '</div><div id="vhEdit' + i + '"></div>' +
-        '<label class="check"><input type="checkbox" data-stay="' + i + '"' + (j.stay ? ' checked' : '') + '> I stay for the whole event' + (br ? ' (until ' + esc(hm(br.end)) + ')' : '') + '</label></div>'; }).join('') + '</div>' +
-      '<div class="fields" style="margin-top:14px"><label class="f">Start from<select id="rtStart" class="sel">' + homeOpts(p.here ? -3 : p.start) + (p.here ? '<option value="-3" selected>Where I was at ' + esc(hm(p.leaveAt)) + '</option>' : '') + '</select></label>' +
-      (p.start === -2 && !p.here ? '<label class="f">Start address<input id="rtStartC" type="text" value="' + esc(p.startCustom || '') + '"></label>' : '') +
-      '<label class="f">Finish at<select id="rtEnd" class="sel">' + homeOpts(p.end) + '</select></label>' + (p.end === -2 ? '<label class="f">Finish address<input id="rtEndC" type="text" value="' + esc(p.endCustom || '') + '"></label>' : '') +
-      '<label class="f">Leave at (optional)<input id="rtLeave" type="time" value="' + (p.leaveAt != null ? String(Math.floor((p.leaveAt % DAY) / 60)).padStart(2, '0') + ':' + String(Math.round(p.leaveAt % 60)).padStart(2, '0') : '') + '"></label></div>' +
-      '<div class="actions" style="margin-top:12px"><button class="primary" type="button" id="rtPlan"' + (rt.busy ? ' disabled' : '') + '>' + (r ? 'Plan again (best order)' : 'Plan my route') + '</button>' + (r ? '<button class="secondary" type="button" id="rtKeep"' + (rt.busy ? ' disabled' : '') + '>Update times, keep my order</button><button class="secondary" type="button" id="rtHere"' + (rt.busy ? ' disabled' : '') + '>Re-plan from where I am now</button>' : '') + '</div>' +
-      (rt.busy ? '<p class="notice">' + esc(rt.busy) + '</p>' : '') + (rt.msg ? '<p class="status ' + rt.msg.kind + '">' + esc(rt.msg.text) + '</p>' : '') + '</section>' +
+      // plan bar
+      '<section class="card planbar"><div class="pbrow">' +
+        '<label class="f">Start from<select id="rtStart" class="sel">' + homeOpts(p.here ? -3 : p.start) + (p.here ? '<option value="-3" selected>Where I was at ' + esc(hm(p.leaveAt)) + '</option>' : '') + '</select></label>' +
+        (p.start === -2 && !p.here ? '<label class="f">Start address<input id="rtStartC" type="text" value="' + esc(p.startCustom || '') + '"></label>' : '') +
+        '<label class="f">Finish at<select id="rtEnd" class="sel">' + homeOpts(p.end) + '</select></label>' + (p.end === -2 ? '<label class="f">Finish address<input id="rtEndC" type="text" value="' + esc(p.endCustom || '') + '"></label>' : '') +
+        '<label class="f pbleave">Leave at<input id="rtLeave" type="time" value="' + (p.leaveAt != null ? String(Math.floor((p.leaveAt % DAY) / 60)).padStart(2, '0') + ':' + String(Math.round(p.leaveAt % 60)).padStart(2, '0') : '') + '"></label>' +
+        '<button class="primary pbgo" type="button" id="rtPlan"' + (rt.busy ? ' disabled' : '') + '>' + (r ? 'Plan again' : 'Plan my route') + '</button></div>' +
+        '<p class="pbinfo">' + nInc + ' of ' + p.jobs.length + ' job' + (p.jobs.length === 1 ? '' : 's') + ' included · ' + (mapsKey() && !googleBad && (settings.routeEngine || 'auto') !== 'free' ? 'live Google traffic' : 'free maps with estimated traffic') + '</p>' +
+        (rt.busy ? '<p class="notice">' + esc(rt.busy) + '</p>' : '') + (rt.msg ? '<p class="status ' + rt.msg.kind + '">' + esc(rt.msg.text) + '</p>' : '') + '</section>' +
+      // jobs (folds away once a route exists)
+      '<details class="card rtjobsbox" id="rtJobsBox"' + (jobsOpen ? ' open' : '') + '><summary><b>Jobs this day</b><span>' + p.jobs.map(j => esc(j.client.split(' ')[0])).join(', ') + '</span><em>Addresses, venue hours, who stays</em></summary><div class="rtjobs">' + p.jobs.map((j, i) => {
+        const br = boothRange(j.booth);
+        return '<div class="rtjob' + (j.include ? '' : ' off') + '"><div class="rjtop"><label class="check"><input type="checkbox" data-inc="' + i + '"' + (j.include ? ' checked' : '') + '> <span class="rjtime">' + esc(br ? hm(br.start) : (j.booth || '')) + '</span> <b>' + esc(j.client) + '</b></label>' + (sheetChanges[j.key] ? (sheetChanges[j.key].type === 'new' ? '<span class="pill newpill">New booking</span>' : '<span class="pill chgpill">Updated</span>') : '') + '</div>' +
+          (j.kit ? '<span class="rtkit">' + esc(j.kit) + '</span>' : '') + '<span class="rtmeta">Booth ' + esc(j.booth || 'time not set') + ' · earliest set-up ' + esc(j.setup || 'not set') + (j.pickup ? ' · pick up ' + esc(j.pickup) : '') + '</span>' +
+          '<label class="f">Address<input type="text" data-addr="' + i + '" value="' + esc(j.addr) + '"></label>' +
+          '<div class="rjfoot"><div class="vhours"><span>' + esc(hoursText(hoursForPJ(j), rt.date)) + '</span>' + (j.home ? '' : ' <button class="linkish" type="button" data-vh="' + i + '">Change</button>') + '</div>' +
+          '<label class="check"><input type="checkbox" data-stay="' + i + '"' + (j.stay ? ' checked' : '') + '> I stay for the whole event' + (br ? ' (until ' + esc(hm(br.end)) + ')' : '') + '</label></div><div id="vhEdit' + i + '"></div></div>'; }).join('') + '</div></details>' +
       (r && p.sheetSig && p.sheetSig !== planSig(p.jobs) ? '<p class="notice warn">The run sheet has changed since this route was planned (a booking was added, removed or its times or address changed). Press <b>Plan again</b> to use the latest run sheet.</p>' : '') +
       (r ? routeResultHTML(p) : '')) +
-    '<section class="card"><h2>Route settings</h2>' + routeSettingsHTML(c) + '</section>';
+    '<details class="card" id="rtSetBox"' + (settingsOpen ? ' open' : '') + '><summary><b>Route settings</b><em>Home addresses, set-up times, Google key</em></summary><div class="setinner">' + routeSettingsHTML(c) + '</div></details>';
   wireRoute(p, c);
+  // remember only what the person opens or closes (not the initial state)
+  const jb = $('rtJobsBox'); if (jb) jb.querySelector('summary').addEventListener('click', () => setTimeout(() => { rt.jobsOpen = jb.open; }));
+  const sb = $('rtSetBox'); if (sb) sb.querySelector('summary').addEventListener('click', () => setTimeout(() => { rt.setOpen = sb.open; }));
   if (r) drawMap(p);
   if (p) ensureHours(p.jobs.filter(j => !j.home).map(j => ({ venue: j.venue, suburb: j.suburb })), () => { if (route.name === 'route' && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))) renderRoute(); });
   if (!data && !rt.loading) rtFetch();
 }
+const gmapsDir = addr => 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(addr);
+const amapsDir = addr => 'https://maps.apple.com/?dirflg=d&daddr=' + encodeURIComponent(addr);
+const navBtns = addr => '<a class="navbtn2" href="' + esc(gmapsDir(addr)) + '" target="_blank" rel="noopener">Google Maps</a><a class="navbtn2 alt" href="' + esc(amapsDir(addr)) + '" target="_blank" rel="noopener">Apple Maps</a>';
 function routeResultHTML(p) {
   const r = p.result; const byId = id => r.stops.find(s => s.id === id);
   const lateSteps = r.steps.filter(s => s.lateBy > 0.5);
   const navUrl = 'https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=' + encodeURIComponent(r.startAddr) + '&destination=' + encodeURIComponent(r.endAddr) + '&waypoints=' + encodeURIComponent(r.steps.slice(0, 9).map(s => byId(s.id).addr).join('|'));
-  return '<section class="card"><h2>Your route</h2>' +
-    '<div class="tiles small"><div class="tile"><span class="k">Leave ' + esc(r.startLabel) + '</span><span class="v">' + esc(hm(r.leave)) + '</span><span class="sub">' + r.steps.length + ' stops</span></div>' +
-    '<div class="tile"><span class="k">Driving</span><span class="v">' + esc(dur(r.drive)) + '</span><span class="sub">' + esc(km(r.steps.reduce((a, s) => a + s.leg.m, 0) + r.home.m)) + ' with traffic</span></div>' +
-    '<div class="tile"><span class="k">Back at ' + esc(r.endLabel) + '</span><span class="v">' + esc(hm(r.backHome)) + '</span><span class="sub">' + esc(dur(r.home.mins)) + ' last drive</span></div>' +
-    '<div class="tile"><span class="k">Timing</span><span class="v ' + (lateSteps.length ? 'warnv' : 'okv') + '">' + (lateSteps.length ? lateSteps.length + ' late' : 'On time') + '</span><span class="sub">' + (lateSteps.length ? 'see the red stops below' : 'every set-up fits its window') + '</span></div></div>' +
-    '<div id="rtMap" class="rtmap" role="img" aria-label="Map of the route"></div>' +
-    '<div class="actions" style="margin:12px 0"><a class="secondary navlink" href="' + esc(navUrl) + '" target="_blank" rel="noopener">Open the whole route in Google Maps</a><button class="secondary" type="button" id="rtAdd">+ Add a stop</button></div>' +
-    '<div id="rtAddBox"></div>' +
+  const pjOf = s => p.jobs.find(j => s.id.startsWith(j.key + '|'));
+  // next stop, when planning today
+  let next = '';
+  if (rt.date === todayISO()) {
+    const now = new Date(); const nm = now.getHours() * 60 + now.getMinutes();
+    const i = r.steps.findIndex(st => !(p.done || []).includes(st.id) && st.leave >= nm);
+    if (i >= 0) { const st = r.steps[i]; const s = byId(st.id); const leaveBy = st.begin - st.leg.mins;
+      next = '<section class="card nextcard"><span class="k">Next stop</span><div class="nxrow"><div><b>' + esc(s.label) + ' · ' + esc(s.name) + '</b><p>' + esc(s.place || s.addr) + ' · ' + (leaveBy > nm ? 'leave by ' + esc(hm(leaveBy)) : 'leave now') + ' · arrive ' + esc(hm(st.arrive)) + '</p></div><div class="nxbtns">' + navBtns(s.addr) + '</div></div></section>'; }
+  }
+  return next + '<div class="rsum"><div><span>Leave ' + esc(r.startLabel) + '</span><b>' + esc(hm(r.leave)) + '</b></div><div><span>Driving</span><b>' + esc(dur(r.drive)) + '</b><small>' + esc(km(r.steps.reduce((a, s) => a + s.leg.m, 0) + r.home.m)) + '</small></div>' +
+      '<div><span>Back at ' + esc(r.endLabel) + '</span><b>' + esc(hm(r.backHome)) + '</b></div><div class="' + (lateSteps.length ? 'bad' : 'good') + '"><span>Timing</span><b>' + (lateSteps.length ? lateSteps.length + ' late' : 'On time') + '</b></div></div>' +
+    '<div class="rtlayout"><section class="card rtmapcard"><div class="maphead"><div class="legend"><span class="lg setup">Set-up</span><span class="lg pack">Pack-down</span><span class="lg home">Home</span></div><button class="linkish" type="button" id="rtFit">Show whole route</button></div>' +
+      '<div id="rtMap" class="rtmap" role="img" aria-label="Map of the route"></div>' +
+      '<div class="actions mapacts"><a class="secondary navlink" href="' + esc(navUrl) + '" target="_blank" rel="noopener">Open the whole route in Google Maps</a><button class="secondary" type="button" id="rtAdd">+ Add a stop</button></div><div id="rtAddBox"></div></section>' +
+    '<section class="card rttimecard"><div class="tlbar"><h2>Timeline</h2>' + (r ? '<div class="actions"><button class="secondary small" type="button" id="rtKeep"' + (rt.busy ? ' disabled' : '') + '>Update times, keep my order</button><button class="secondary small" type="button" id="rtHere"' + (rt.busy ? ' disabled' : '') + '>Re-plan from where I am now</button></div>' : '') + '</div>' +
     '<ol class="timeline">' +
       '<li class="tl home"><span class="tlt">' + esc(hm(r.leave)) + '</span><div><b>Leave ' + esc(r.startLabel) + '</b></div></li>' +
-      r.steps.map((st, i) => { const s = byId(st.id); const done = (p.done || []).includes(st.id); const late = st.lateBy > 0.5;
+      r.steps.map((st, i) => { const s = byId(st.id); const done = (p.done || []).includes(st.id); const late = st.lateBy > 0.5; const pj = pjOf(s);
         const extra = st.leg.usual ? Math.round(st.leg.mins - st.leg.usual) : 0;
-        const legTxt = dur(st.leg.mins) + ' drive · ' + km(st.leg.m) + (st.leg.est ? (extra >= 3 ? ' · includes about ' + extra + ' min for usual traffic at that time' : ' · light traffic expected') : extra >= 3 ? ' · ' + extra + ' min extra from traffic' : st.leg.traffic ? ' · traffic is light' : '');
-        return '<li class="tl leg"><span class="tlt"></span><div class="legtxt">' + esc(legTxt) + ' <a href="' + esc('https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(s.addr)) + '" target="_blank" rel="noopener">Google Maps</a> · <a href="' + esc('https://maps.apple.com/?dirflg=d&daddr=' + encodeURIComponent(s.addr)) + '" target="_blank" rel="noopener">Apple Maps</a></div></li>' +
-          '<li class="tl stop' + (late ? ' late' : '') + (done ? ' done' : '') + '"><span class="tlt">' + esc(hm(st.begin)) + '</span><div><div class="stophead"><span class="stopno">' + (i + 1) + '</span><b>' + esc(s.label) + ': ' + esc(s.name) + '</b>' + (done ? '<span class="pill paid">Done</span>' : '') + '</div>' +
+        const legTxt = dur(st.leg.mins) + ' drive · ' + km(st.leg.m) + (st.leg.est ? (extra >= 3 ? ' · about ' + extra + ' min for usual traffic' : ' · light traffic expected') : extra >= 3 ? ' · ' + extra + ' min extra from traffic' : st.leg.traffic ? ' · traffic is light' : '');
+        return '<li class="tl leg"><span class="tlt"></span><div class="legtxt"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11v6a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H8v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1zm2.2-1h9.6l-1-3H8.2zM7.5 14a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4zm9 0a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4z"/></svg> ' + esc(legTxt) + '</div></li>' +
+          '<li class="tl stop kind-' + s.kind + (late ? ' late' : '') + (done ? ' done' : '') + '"><span class="tlt">' + esc(hm(st.begin)) + '</span><div><div class="stophead"><button class="stopno" type="button" data-focus="' + i + '" title="Show on the map">' + (i + 1) + '</button><b>' + esc(s.label) + ': ' + esc(s.name) + '</b>' + (done ? '<span class="pill paid">Done</span>' : '') + '</div>' +
           '<p class="stopsub">' + esc(s.place || '') + ' · arrive ' + esc(hm(st.arrive)) + (st.waitBefore > 4 ? ' (wait ' + esc(dur(st.waitBefore)) + (s.venueOpen != null && Math.abs(st.begin - s.venueOpen) < 1 ? ', venue opens ' + esc(hm(s.venueOpen)) : '') + ')' : '') + ' · ' + (s.kind === 'setup' ? 'set up ' + esc(hm(st.begin)) + '–' + esc(hm(st.end)) + (s.boothStart != null ? ', booth starts ' + esc(hm(s.boothStart)) : '') + (s.stayUntil != null ? ', staying until ' + esc(hm(s.stayUntil)) : '') : s.kind === 'pack' ? 'booth ends ' + esc(hm(s.boothEnd)) + ', pack down ' + esc(hm(st.begin)) + '–' + esc(hm(st.end)) : esc(dur(s.dur)) + ' stop') + '</p>' +
+          (s.kind === 'setup' && pj && pj.kit ? '<p class="stopkit">' + esc(pj.kit) + '</p>' : '') +
           (s.kind === 'setup' && s.venueClosed ? '<p class="status bad">The venue is listed as closed on this day. Check access with the venue.</p>' : '') + (s.kind === 'setup' && s.venueClose != null && st.end > s.venueClose && (s.boothStart == null || s.venueClose < s.boothStart) ? '<p class="status bad">The venue\'s listed hours end at ' + esc(hm(s.venueClose)) + ', before your set-up finishes. Check access with the venue.</p>' : '') +
           (late ? '<p class="status bad">' + (s.kind === 'setup' ? 'Set-up would finish ' + esc(dur(st.lateBy)) + ' too late for the booth start (with your ' + p.cfg.bufferMins + ' min buffer).' : 'About ' + esc(dur(st.lateBy)) + ' later than planned.') + '</p>' : '') +
+          '<div class="stopnav">' + navBtns(s.addr) + '</div>' +
           '<div class="stopbtns"><button class="linkish" type="button" data-up="' + i + '"' + (i === 0 ? ' disabled' : '') + '>Move up</button><button class="linkish" type="button" data-down="' + i + '"' + (i === r.steps.length - 1 ? ' disabled' : '') + '>Move down</button><button class="linkish" type="button" data-done="' + esc(st.id) + '">' + (done ? 'Not done' : 'Mark done') + '</button>' + (s.kind === 'extra' ? '<button class="linkish" type="button" data-rmx="' + esc(st.id) + '">Remove</button>' : '') + '</div></div></li>'; }).join('') +
-      '<li class="tl leg"><span class="tlt"></span><div class="legtxt">' + esc(dur(r.home.mins) + ' drive · ' + km(r.home.m)) + '</div></li>' +
+      '<li class="tl leg"><span class="tlt"></span><div class="legtxt">' + esc(dur(r.home.mins) + ' drive home · ' + km(r.home.m)) + '</div></li>' +
       '<li class="tl home"><span class="tlt">' + esc(hm(r.backHome)) + '</span><div><b>Back at ' + esc(r.endLabel) + '</b></div></li></ol>' +
-    '<p class="hint">Planned ' + esc(ago(r.at)) + '. After moving stops, press "Update times, keep my order". If something changes on the day, press "Re-plan from where I am now". It uses your location and the traffic right now for the stops not marked done.</p></section>';
+    '<p class="hint">Planned ' + esc(ago(r.at)) + '. Tap a stop’s number to find it on the map. After moving stops, press “Update times, keep my order”.</p></section></div>';
 }
 function routeSettingsHTML(c) {
   return '<div class="stack">' + c.homes.map((h, i) => '<div class="homerow"><input type="text" data-hl="' + i + '" value="' + esc(h.label) + '" placeholder="Name, e.g. Mount Duneed" aria-label="Name"><input type="text" data-ha="' + i + '" value="' + esc(h.addr) + '" placeholder="Full address" aria-label="Address"><button class="iconbtn" type="button" data-hdel="' + i + '" aria-label="Remove address">×</button></div>').join('') +
@@ -2250,23 +2323,44 @@ function wireRoute(p, c) {
       savePlan(); computePlan(false); });
   });
 }
-let rtMap = null;
+let rtMap = null, rtMarkers = [], rtBounds = null;
 function drawMap(p) {
   const el = $('rtMap'); if (!el) return;
   loadLib('leaflet', 'L').then(() => {
     if (rtMap) { try { rtMap.remove(); } catch (e) {} rtMap = null; }
-    const L = window.L; rtMap = L.map(el, { scrollWheelZoom: false, fadeAnimation: false });
+    const L = window.L; rtMap = L.map(el, { scrollWheelZoom: false, fadeAnimation: false, zoomControl: true, attributionControl: true });
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap contributors', referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(rtMap);
-    const r = p.result; const bounds = []; const css = getComputedStyle(document.documentElement); const accent = css.getPropertyValue('--accent').trim() || '#b0127a';
-    r.steps.concat([r.home]).forEach(st => { const leg = st.leg || st; if (leg.poly) { const pts = decodePolyline(leg.poly); pts.forEach(x => bounds.push(x)); L.polyline(pts, { color: accent, weight: 4, opacity: 0.85 }).addTo(rtMap); } });
-    const first = r.steps[0] && r.steps[0].leg.from; if (first) { L.marker(first, { icon: L.divIcon({ className: 'pin home', html: '<span>H</span>', iconSize: [28, 28] }), title: r.startLabel }).addTo(rtMap); bounds.push(first); }
+    const r = p.result; const bounds = []; const css = getComputedStyle(document.documentElement);
+    const col = { setup: css.getPropertyValue('--accent').trim() || '#b0127a', pack: css.getPropertyValue('--pack').trim() || '#0f7c80', extra: css.getPropertyValue('--muted').trim() || '#6b6273', home: css.getPropertyValue('--muted').trim() || '#6b6273' };
+    const casing = css.getPropertyValue('--panel').trim() || '#ffffff';
+    const line = (poly, color, dashed) => { if (!poly) return; const pts = decodePolyline(poly); pts.forEach(x => bounds.push(x));
+      L.polyline(pts, { color: casing, weight: 9, opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(rtMap);
+      L.polyline(pts, { color, weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round', dashArray: dashed ? '2 10' : null, interactive: false }).addTo(rtMap); };
+    r.steps.forEach(st => { const s = r.stops.find(x => x.id === st.id); line(st.leg.poly, col[s.kind] || col.setup, false); });
+    line(r.home.poly, col.home, true);
+    const houseSvg = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg>';
+    const pin = (cls, html, w) => L.divIcon({ className: 'mpin ' + cls, html: '<div class="mpin-b">' + html + '</div>', iconSize: [w, 34], iconAnchor: [w / 2, 34], popupAnchor: [0, -32] });
+    const start = r.steps[0] && r.steps[0].leg.from;
+    if (start) { L.marker(start, { icon: pin('home', houseSvg, 30), title: r.startLabel, zIndexOffset: -100 }).bindPopup('<b>' + esc(r.startLabel) + '</b><br>Leave ' + esc(hm(r.leave))).addTo(rtMap); bounds.push(start); }
+    if (r.home.to && start && (Math.abs(r.home.to[0] - start[0]) > 1e-4 || Math.abs(r.home.to[1] - start[1]) > 1e-4)) { L.marker(r.home.to, { icon: pin('home', houseSvg, 30), title: r.endLabel }).bindPopup('<b>' + esc(r.endLabel) + '</b><br>Back ' + esc(hm(r.backHome))).addTo(rtMap); bounds.push(r.home.to); }
     // one pin per place; a venue visited twice (set up, then pack down) shows both numbers
-    const places = new Map();
+    const places = new Map(); rtMarkers = [];
     r.steps.forEach((st, i) => { if (!st.leg.to) return; const k = st.leg.to.map(x => x.toFixed(4)).join(','); const s = r.stops.find(x => x.id === st.id);
-      const g = places.get(k) || { at: st.leg.to, nums: [], titles: [], late: false }; g.nums.push(i + 1); g.titles.push((i + 1) + '. ' + s.label + ': ' + s.name); g.late = g.late || st.lateBy > 0.5; places.set(k, g); });
-    places.forEach(g => { const w = 18 + 10 * g.nums.join('·').length; L.marker(g.at, { icon: L.divIcon({ className: 'pin' + (g.late ? ' late' : ''), html: '<span>' + g.nums.join('·') + '</span>', iconSize: [Math.max(28, w), 28] }), title: g.titles.join('\n') }).addTo(rtMap); bounds.push(g.at); });
-    if (bounds.length) rtMap.fitBounds(bounds, { padding: [24, 24] }); else rtMap.setView([-37.81, 144.96], 9);
-  }).catch(() => { el.innerHTML = '<p class="empty" style="padding:16px">The map could not load. The times below are still correct.</p>'; });
+      const g = places.get(k) || { at: st.leg.to, items: [], kinds: new Set(), late: false, addr: s.addr }; g.items.push({ i, s, st }); g.kinds.add(s.kind); g.late = g.late || st.lateBy > 0.5; places.set(k, g); });
+    places.forEach(g => {
+      const label = g.items.map(x => x.i + 1).join('·'); const w = Math.max(30, 16 + 9 * label.length);
+      const cls = (g.kinds.size > 1 ? 'both' : [...g.kinds][0]) + (g.late ? ' late' : '') + (g.items.every(x => (p.done || []).includes(x.st.id)) ? ' done' : '');
+      const html = '<div class="mpop"><b>' + esc(g.items[0].s.place || g.items[0].s.name) + '</b>' + g.items.map(x => '<div>' + (x.i + 1) + '. ' + esc(x.s.label) + ': ' + esc(x.s.name) + ' · ' + esc(hm(x.st.begin)) + '</div>').join('') + '<a href="' + esc(gmapsDir(g.addr)) + '" target="_blank" rel="noopener">Directions in Google Maps</a></div>';
+      const m = L.marker(g.at, { icon: pin(cls, '<span>' + label + '</span>', w), title: g.items.map(x => (x.i + 1) + '. ' + x.s.label + ': ' + x.s.name).join('\n'), riseOnHover: true }).bindPopup(html).addTo(rtMap);
+      g.items.forEach(x => { rtMarkers[x.i] = m; }); bounds.push(g.at);
+    });
+    rtBounds = bounds.length ? L.latLngBounds(bounds) : null;
+    if (rtBounds) rtMap.fitBounds(rtBounds, { padding: [30, 30] }); else rtMap.setView([-37.81, 144.96], 9);
+  }).catch(() => { el.innerHTML = '<p class="empty" style="padding:16px">The map could not load. The times are still correct.</p>'; });
+  const fit = $('rtFit'); if (fit) fit.addEventListener('click', () => { if (rtMap && rtBounds) rtMap.fitBounds(rtBounds, { padding: [30, 30] }); });
+  document.querySelectorAll('[data-focus]').forEach(b => b.addEventListener('click', () => { const m = rtMarkers[+b.dataset.focus]; if (!rtMap || !m) return;
+    const mapEl = $('rtMap'); const rect = mapEl.getBoundingClientRect(); if (rect.top < 0 || rect.bottom > window.innerHeight) mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    rtMap.setView(m.getLatLng(), Math.max(rtMap.getZoom(), 12)); m.openPopup(); }));
 }
 async function rtFetch() {
   const d = dateOf(rt.date); rt.loading = true; renderRoute();
