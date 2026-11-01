@@ -2,15 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-G7MA+x2m+34nQspErRvh3fDvz2mlxFd2AFI0gdosrBM=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-w+1wUikecg7LkVPEJ9jknLf28Q+kEsABLfhgFy3c/F0=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
-<meta name="theme-color" content="#b0127a">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#b0127a">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#17131a">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="leaflet/leaflet.css">
 <link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Boothkeepr">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
@@ -251,6 +252,8 @@ a.navlink { display: inline-block; text-decoration: none; background: var(--pane
 .toast b { font-size: 15px; } .toast .actions { margin-top: 6px; }
 .vhours { font-size: 13px; color: var(--muted); } .vhedit { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; padding: 10px; border: 1px dashed var(--line); border-radius: 8px; } .vhedit .f { flex: 0 1 140px; }
 .job .vh { color: var(--fg); }
+.iconpick { display: flex; flex-wrap: wrap; gap: 12px; } .iconopt { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; font-size: 13px; min-width: 110px; }
+.iconopt img { border-radius: 13px; } .iconopt input { margin: 0; } .iconopt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .syncline { display: flex; gap: 8px; align-items: center; margin: 0; }
 .sharepanel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); display: flex; flex-direction: column; gap: 10px; }
 .sharepanel p { margin: 0; font-size: 14px; }
@@ -1576,7 +1579,8 @@ function renderAccount() {
       '<p class="hint" style="margin:0">Shown in the app, and later to your manager or team. The name printed on your invoices is set separately under "Your details" in each invoice.</p></div></div><p class="status" id="pfMsg" role="status"></p></section>' +
       '<section class="card"><h2>Sync</h2><p class="syncline"><i class="dot ' + (cloud.status === 'synced' ? 'paid' : 'unpaid') + '"></i>' + esc(syncText()) + '</p>' +
       '<p class="hint">Your invoices, receipts, details and run sheet link are saved to your account and show up on every phone or computer you sign in on. You can keep working with no internet; changes upload when you are back online.</p></section>' +
-      '<section class="card"><h2>Sign out</h2><p class="hint" style="margin-top:0">Signing out erases everything from this device: invoices, receipts, your details, the run sheet copy and settings. They stay safe in your account and come back when you sign in again.</p><div class="actions" style="margin-top:10px"><button class="secondary" type="button" id="acOut">Sign out</button></div></section>';
+      '<section class="card"><h2>Sign out</h2><p class="hint" style="margin-top:0">Signing out erases everything from this device: invoices, receipts, your details, the run sheet copy and settings. They stay safe in your account and come back when you sign in again.</p><div class="actions" style="margin-top:10px"><button class="secondary" type="button" id="acOut">Sign out</button></div></section>' + iconChoiceHTML();
+    setTimeout(wireIconChoice);
     $('acOut').addEventListener('click', async () => { $('acOut').disabled = true; const done = await cloud.signOutAll(); if (!done && $('acOut')) $('acOut').disabled = false; });
     const pmsg = (t, k) => { $('pfMsg').className = 'status ' + (k || ''); $('pfMsg').textContent = t; };
     $('pfSave').addEventListener('click', async () => { const n = $('pfName').value.trim(); if (!n) { pmsg('Type a username first.', 'bad'); return; }
@@ -1592,7 +1596,8 @@ function renderAccount() {
     '<div class="actions"><button class="primary" type="submit" id="acIn">Sign in</button><button class="secondary" type="button" id="acNew">Create account</button><button class="linkish" type="button" id="acReset">Forgot password?</button></div></form>' +
     '<p class="status" id="status" role="status"></p>' +
     (invoices.length ? '<p class="hint">The ' + invoices.length + ' invoice' + (invoices.length === 1 ? '' : 's') + ' already on this device will be copied into your account when you sign in (you will be asked first).</p>' : '') + '</section>' +
-    '<section class="card"><h2>Erase this device</h2><p class="hint" style="margin-top:0">Removes every invoice, receipt, detail and setting saved in this browser. Use this before handing the device to someone else.</p><div class="actions" style="margin-top:10px"><button class="danger" type="button" id="acWipe">Erase everything on this device</button></div></section>';
+    '<section class="card"><h2>Erase this device</h2><p class="hint" style="margin-top:0">Removes every invoice, receipt, detail and setting saved in this browser. Use this before handing the device to someone else.</p><div class="actions" style="margin-top:10px"><button class="danger" type="button" id="acWipe">Erase everything on this device</button></div></section>' + iconChoiceHTML();
+  setTimeout(wireIconChoice);
   $('acWipe').addEventListener('click', async () => { if (await confirmBox('Erase everything on this device?', 'All invoices, receipts and details saved in this browser will be deleted. This cannot be undone. Back them up first if you need them.', 'Erase everything', 'Cancel', true)) { await wipeDevice(); location.replace(location.pathname); } });
   const F = window.SKFB; const busy = b => ['acGoogle', 'acIn', 'acNew'].forEach(id => { if ($(id)) $(id).disabled = b; });
   const run = async fn => { busy(true); say(''); try { await fn(); } catch (e) { say(authError(e), 'bad'); } busy(false); };
@@ -2339,6 +2344,25 @@ setTimeout(syncSheet, 2500);
 setInterval(() => { if (document.visibilityState === 'visible') syncSheet(); }, 120000);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - lastSheetSync > 30000) syncSheet(); });
 window.addEventListener('online', () => setTimeout(syncSheet, 1000));
+
+/* ---------- home-screen icon: dark or light ----------
+   iPhones take the icon when the site is added to the Home Screen, so the icon is picked to match the
+   phone's appearance at that moment (or the choice saved below). */
+function applyAppIcon() {
+  let pref = 'auto'; try { pref = JSON.parse(localStorage.getItem('skinv.appIcon') || '"auto"'); } catch (e) {}
+  const dark = pref === 'dark' || (pref === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  let l = document.querySelector('link[rel="apple-touch-icon"]'); if (!l) { l = document.createElement('link'); l.rel = 'apple-touch-icon'; document.head.appendChild(l); }
+  l.href = dark ? 'apple-touch-icon-dark.png' : 'apple-touch-icon.png';
+  const ic = document.querySelector('link[rel="icon"]'); if (ic) ic.href = dark ? 'icon-192-dark.png' : 'icon-192.png';
+}
+applyAppIcon();
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyAppIcon); } catch (e) {}
+function iconChoiceHTML() {
+  const cur = store.get('appIcon', 'auto');
+  return '<section class="card"><h2>Home-screen icon</h2><div class="iconpick">' + [['auto', 'Match my phone'], ['dark', 'Always dark'], ['light', 'Always light']].map(([v, l]) => '<label class="iconopt"><input type="radio" name="appIcon" value="' + v + '"' + (cur === v ? ' checked' : '') + '><img src="' + (v === 'light' ? 'apple-touch-icon.png' : v === 'dark' ? 'apple-touch-icon-dark.png' : (matchMedia('(prefers-color-scheme: dark)').matches ? 'apple-touch-icon-dark.png' : 'apple-touch-icon.png')) + '" alt="" width="56" height="56"><span>' + l + '</span></label>').join('') + '</div>' +
+    '<p class="hint">iPhones keep the icon they were given when you added the app. After changing this, remove the Boothkeepr icon from your Home Screen and add it again from Safari (Share, then Add to Home Screen).</p></section>';
+}
+function wireIconChoice() { document.querySelectorAll('input[name="appIcon"]').forEach(r => r.addEventListener('change', () => { store.set('appIcon', r.value); applyAppIcon(); })); }
 
 /* ---------- password-protected share links ----------
    The invoice is encrypted in the browser (AES-GCM, key from the password with PBKDF2) and the result

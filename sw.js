@@ -1,6 +1,6 @@
 // Keeps the invoice maker working with no internet.
-const CACHE = 'boothkeepr-v9';
-const FILES = ['./', 'index.html', 'jspdf.umd.min.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'jszip.min.js', 'pdf.min.js', 'pdf.worker.min.js', 'xlsx.full.min.js', 'fb.js'];
+const CACHE = 'boothkeepr-v10';
+const FILES = ['./', 'index.html', 'jspdf.umd.min.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'jszip.min.js', 'pdf.min.js', 'pdf.worker.min.js', 'xlsx.full.min.js', 'fb.js', 'apple-touch-icon.png', 'apple-touch-icon-dark.png', 'icon-192-dark.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 // Network first so updates show up straight away; the saved copy is used when offline.
