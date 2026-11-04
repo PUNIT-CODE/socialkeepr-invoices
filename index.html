@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-yNAg5CBM223Oforu0HMb+CK8ZrsaVlqMvdZFj8fxUMA=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-rZzZ87OywBwwpxLeDz5b3R9j85qMh8n7BATCMaNgndg=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -314,6 +314,18 @@ button.stopno { border: 0; cursor: pointer; padding: 0; font: inherit; font-size
 .navbtn2 { font-size: 13px; text-decoration: none; padding: 6px 12px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; } .navbtn2.alt { background: var(--panel); color: var(--fg); border: 1px solid var(--line); }
 .nextcard { border-color: var(--accent); background: var(--accent-soft); } .nextcard .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); font-weight: 700; }
 .nxrow { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; margin-top: 4px; } .nxrow p { margin: 2px 0 0; font-size: 14px; color: var(--muted); } .nxbtns { display: flex; gap: 8px; }
+.nbadge { margin-left: auto; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 7px; }
+.nrows { display: flex; flex-direction: column; gap: 4px; }
+.nrow { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); } .nrow:first-child { border-top: 0; }
+.nrow b { font-size: 15px; } .nrow p { margin: 2px 0 6px; font-size: 13px; color: var(--muted); }
+.inlrow { display: flex; flex-wrap: wrap; gap: 10px; } .f.inl { max-width: 260px; }
+.switch { position: relative; width: 46px; height: 28px; display: inline-block; } .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.switch span { position: absolute; inset: 0; background: var(--line); border-radius: 999px; transition: background .15s; cursor: pointer; } .switch span::after { content: ''; position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s; }
+.switch input:checked + span { background: var(--accent); } .switch input:checked + span::after { transform: translateX(18px); } .switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; } .nlist li { border-top: 1px solid var(--line); } .nlist li:first-child { border-top: 0; }
+.nlist button { width: 100%; text-align: left; background: none; border: 0; color: var(--fg); padding: 12px 4px 12px 18px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; position: relative; font: inherit; }
+.nlist li.unread button::before { content: ''; position: absolute; left: 4px; top: 18px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.ntitle { font-weight: 600; } .nbody { font-size: 14px; color: var(--muted); } .nat { font-size: 12px; color: var(--muted); }
 .syncline { display: flex; gap: 8px; align-items: center; margin: 0; }
 .sharepanel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); display: flex; flex-direction: column; gap: 10px; }
 .sharepanel p { margin: 0; font-size: 14px; }
@@ -386,6 +398,7 @@ button.danger:hover { border-color: var(--warn); }
     <nav class="nav" aria-label="Main">
       <button class="navbtn new" type="button" id="navNew">+ New invoice</button>
       <button class="navbtn" type="button" id="navDash">Dashboard</button>
+      <button class="navbtn" type="button" id="navNotify">Notifications <span class="nbadge" id="nBadge" hidden></span></button>
       <button class="navbtn" type="button" id="navMsg">Client messages</button>
       <button class="navbtn" type="button" id="navRoute">Route planner</button>
       <button class="navbtn" type="button" id="navRun">Run sheet</button>
@@ -472,7 +485,10 @@ function cleanSettings(d) {
   const route = { homes: (Array.isArray(rs.homes) ? rs.homes : []).slice(0, 6).filter(h => h && typeof h === 'object').map(h => ({ label: S(h.label, 40), addr: S(h.addr, 200) })), setupMins: num(rs.setupMins, 5, 240, 45), packMins: num(rs.packMins, 5, 240, 30), bufferMins: num(rs.bufferMins, 0, 120, 15) };
   const vh = {}; const vsrc = d && d.venueHours && typeof d.venueHours === 'object' ? d.venueHours : {};
   Object.keys(vsrc).slice(0, 300).forEach(k => { if (!/^[a-z |]{1,130}$/.test(k) || typeof vsrc[k] !== 'object' || !vsrc[k]) return; const o = {}; Object.keys(vsrc[k]).forEach(dw => { if (!/^[0-6]$/.test(dw) || !Array.isArray(vsrc[k][dw])) return; o[dw] = vsrc[k][dw].slice(0, 4).filter(x => Array.isArray(x) && x.length === 2).map(x => [num(x[0], 0, 2 * DAY, 0), num(x[1], 0, 2 * DAY, 0)]); }); vh[k] = o; });
-  return { merchants: m, sheetLink: S(d && d.sheetLink, 300), templates: tp, route, venueHours: vh, routeEngine: d && d.routeEngine === 'free' ? 'free' : 'auto', mapsKey: /^[A-Za-z0-9_-]{0,60}$/.test(S(d && d.mapsKey, 60)) ? S(d && d.mapsKey, 60) : '' };
+  const np = d && d.notify && typeof d.notify === 'object' ? d.notify : null; let notify;
+  if (np) { const b = v => v !== false; const t = (v, x) => num(v, 0, DAY - 1, x);
+    notify = { tomorrow: { on: b((np.tomorrow || {}).on), at: t((np.tomorrow || {}).at, 1140) }, confirm: { on: b((np.confirm || {}).on) }, sheet: { on: b((np.sheet || {}).on) }, invoice: { on: b((np.invoice || {}).on), day: num((np.invoice || {}).day, 0, 6, 3), at: t((np.invoice || {}).at, 1080) }, event: { on: b((np.event || {}).on), lead: num((np.event || {}).lead, 10, 240, 60) }, quiet: { from: t((np.quiet || {}).from, 1320), to: t((np.quiet || {}).to, 420) } }; }
+  return { merchants: m, sheetLink: S(d && d.sheetLink, 300), templates: tp, route, venueHours: vh, ...(notify ? { notify } : {}), routeEngine: d && d.routeEngine === 'free' ? 'free' : 'auto', mapsKey: /^[A-Za-z0-9_-]{0,60}$/.test(S(d && d.mapsKey, 60)) ? S(d && d.mapsKey, 60) : '' };
 }
 function tooBig(f, max = LIMITS.uploadBytes) { return !f || f.size > max; }
 
@@ -547,6 +563,7 @@ $('navImport').addEventListener('click', () => go({ name: 'import' }));
 $('navRun').addEventListener('click', () => go({ name: 'runsheet' }));
 $('acctBtn').addEventListener('click', () => go({ name: 'account' }));
 $('navMsg').addEventListener('click', () => go({ name: 'messages' }));
+$('navNotify').addEventListener('click', () => { nstate.checked = false; go({ name: 'notify' }); });
 $('navRoute').addEventListener('click', () => go({ name: 'route' }));
 const weekOfInv = inv => inv.weekStart || invoiceWeekStart(inv.date);
 function invoiceForWeek(ws, exceptNo) { return sorted().find(i => weekOfInv(i) === ws && Number(i.no) !== Number(exceptNo)); }
@@ -600,6 +617,7 @@ function render() { renderSide(); const v = $('view');
   else if (route.name === 'runsheet') renderRunSheet();
   else if (route.name === 'account') renderAccount();
   else if (route.name === 'messages') renderMessages();
+  else if (route.name === 'notify') renderNotify();
   else if (route.name === 'route') renderRoute();
 }
 
@@ -613,6 +631,8 @@ function renderSide() {
   $('navImport').setAttribute('aria-current', route.name === 'import' ? 'page' : 'false');
   $('navRun').setAttribute('aria-current', route.name === 'runsheet' ? 'page' : 'false');
   $('navMsg').setAttribute('aria-current', route.name === 'messages' ? 'page' : 'false');
+  $('navNotify').setAttribute('aria-current', route.name === 'notify' ? 'page' : 'false');
+  { const nb = $('nBadge'); const n = typeof unreadCount === 'function' ? unreadCount() : 0; nb.hidden = !n; nb.textContent = n > 9 ? '9+' : String(n); }
   $('navRoute').setAttribute('aria-current', route.name === 'route' ? 'page' : 'false');
   const list = $('invList'); const all = sorted();
   $('listCount').textContent = 'Invoices' + (loaded ? ' (' + all.length + ')' : '');
@@ -1102,7 +1122,7 @@ function sheetProblem(res) {
   if (r.error === 'blocked' || r.error === 'timeout') return 'Could not open the sheet (' + r.error + '). Check your internet, and that the sheet is shared as "Anyone with the link can view".';
   return 'The sheet could not be read (' + r.error + ').';
 }
-function ago(t) { if (!t) return ''; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; }
+function ago(t) { if (!t) return ''; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : (Math.round(m / 1440) === 1 ? 'yesterday' : Math.round(m / 1440) + ' days ago'); }
 function weekSummary(jobs) {
   const att = jobs.map(j => ({ j, h: attendantHours(j) })).filter(x => x.h > 0);
   return { count: jobs.length, days: daysText(jobs.map(j => j.date)), attHours: round2(att.reduce((s, x) => s + x.h, 0)), att };
@@ -1612,6 +1632,7 @@ const cloud = {
       if (route.name === 'edit') renderSide(); else render();
     }, () => { this.status = 'error'; renderSide(); }));
     this.unsub.push(F.onSnapshot(window.SKFB.doc(this.fs, 'users', u.uid), s => { const m = s.data() || {}; this.member = Object.assign({}, m, { name: S(m.name, 40), photo: safePhoto(m.photo), phone: S(m.phone, 20) }); renderSide(); if (route.name === 'account' && !$('pfName')) render(); }));
+    setTimeout(watchNotifs, 0);
     this.unsub.push(F.onSnapshot(this.ref('private', 'profile'), s => { const d = s.data(); if (d) { profile.name = S(d.name, 80); profile.tfn = S(d.tfn, 20); if (route.name !== 'edit') render(); } }));
     this.unsub.push(F.onSnapshot(this.ref('private', 'settings'), s => { const d = s.data(); if (d) { settings = cleanSettings(d); if (d.sheetLink != null) sheetCfg.link = settings.sheetLink; } }));
   },
@@ -1639,12 +1660,13 @@ const cloud = {
   delReceipt(id) { return window.SKFB.deleteDoc(window.SKFB.doc(this.col('receipts'), id)); },
   saveProfile(p) { return window.SKFB.setDoc(this.ref('private', 'profile'), { name: S(p.name, 80), tfn: S(p.tfn, 20) }); },
   saveMember(d) { d = Object.assign({}, d); if ('name' in d) d.name = S(d.name, 40); if ('phone' in d) d.phone = S(d.phone, 20); if ('photo' in d) d.photo = safePhoto(d.photo); return window.SKFB.updateDoc(window.SKFB.doc(this.fs, 'users', this.user.uid), Object.assign({ updatedAt: new Date().toISOString() }, d)); },
-  saveSettings() { return window.SKFB.setDoc(this.ref('private', 'settings'), cleanSettings({ merchants: settings.merchants, sheetLink: sheetCfg.link, templates: settings.templates, route: settings.route, mapsKey: settings.mapsKey, venueHours: settings.venueHours, routeEngine: settings.routeEngine })).catch(() => {}); },
+  saveSettings() { return window.SKFB.setDoc(this.ref('private', 'settings'), cleanSettings({ merchants: settings.merchants, sheetLink: sheetCfg.link, templates: settings.templates, route: settings.route, mapsKey: settings.mapsKey, venueHours: settings.venueHours, routeEngine: settings.routeEngine, notify: settings.notify })).catch(() => {}); },
   async signOutAll() {
     const F = window.SKFB;
     const saved = await Promise.race([F.waitForPendingWrites(this.fs).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), 6000))]);
     if (!saved && !(await confirmBox('Some changes have not uploaded yet', 'You seem to be offline. If you sign out now, changes made on this device since you went offline will be lost.', 'Sign out anyway', 'Stay signed in', true))) return false;
-    this.unsub.forEach(f => f()); this.unsub = [];
+    this.unsub.forEach(f => f()); this.unsub = []; if (notifUnsub) { notifUnsub(); notifUnsub = null; }
+    try { const sub = await currentSub(); if (sub) { try { await window.SKFB.deleteDoc(window.SKFB.doc(this.col('push'), await deviceId(sub.endpoint))); } catch (e) {} await sub.unsubscribe(); } } catch (e) {}
     try { await F.signOut(this.auth); } catch (e) {}
     try { await F.terminate(this.fs); await F.clearIndexedDbPersistence(this.fs); } catch (e) {}
     await wipeDevice();
@@ -2303,7 +2325,7 @@ function wireRoute(p, c) {
     saveSettings(); if (p) { p.cfg = { setupMins: settings.route.setupMins, packMins: settings.route.packMins, bufferMins: settings.route.bufferMins }; if (p.start < 0 && p.start !== -2 && settings.route.homes.length) p.start = 0; if (p.end < 0 && p.end !== -2 && settings.route.homes.length) p.end = 0; }
     rt.msg = { text: 'Route settings saved.', kind: 'ok' }; renderRoute();
   });
-  if (!p) return;
+  if (!p || !p.jobs.length || !$('rtStart')) return;
   document.querySelectorAll('[data-inc]').forEach(b => b.addEventListener('change', () => { p.jobs[+b.dataset.inc].include = b.checked; savePlan(); renderRoute(); }));
   document.querySelectorAll('[data-vh]').forEach(b => b.addEventListener('click', () => { const i = +b.dataset.vh; const j = p.jobs[i]; const box = $('vhEdit' + i); const dow = dateOf(rt.date).getDay(); const cur = hoursOn(hoursForPJ(j), rt.date);
     const t2 = m => m == null ? '' : String(Math.floor((m % DAY) / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
@@ -2503,6 +2525,83 @@ function iconChoiceHTML() {
     '<p class="hint">iPhones keep the icon they were given when you added the app. After changing this, remove the Boothkeepr icon from your Home Screen and add it again from Safari (Share, then Add to Home Screen).</p></section>';
 }
 function wireIconChoice() { document.querySelectorAll('input[name="appIcon"]').forEach(r => r.addEventListener('change', () => { store.set('appIcon', r.value); applyAppIcon(); })); }
+
+/* ---------- notifications: reminders on this phone, sent by the Boothkeepr reminder service ---------- */
+const VAPID_PUBLIC = 'BL4N88QauaPsao5-d21dYEzxsA1ZJ_Tk-8j8R6XrFJeEqLfQb2qHCJWft4BPxa4Mk9KI7GF6rOyYQY7HG8IreJE';
+const NDEF = { tomorrow: { on: true, at: 1140 }, confirm: { on: true }, sheet: { on: true }, invoice: { on: true, day: 3, at: 1080 }, event: { on: true, lead: 60 }, quiet: { from: 1320, to: 420 } };
+const nprefs = () => { const p = settings.notify || {}; const o = JSON.parse(JSON.stringify(NDEF)); Object.keys(o).forEach(k => { if (p[k] && typeof p[k] === 'object') Object.assign(o[k], p[k]); }); return o; };
+let notifs = [], notifUnsub = null;
+const markedRead = new Set();
+const unreadCount = () => notifs.filter(n => !n.read && !markedRead.has(n.id)).length;
+function watchNotifs() {
+  if (notifUnsub) { notifUnsub(); notifUnsub = null; }
+  if (mode !== 'cloud' || !cloud.user) { notifs = []; return; }
+  const F = window.SKFB;
+  notifUnsub = F.onSnapshot(F.query(cloud.col('notifications'), F.orderBy('at', 'desc'), F.limit(40)), snap => {
+    notifs = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).map(n => ({ id: S(n.id, 160), title: S(n.title, 80), body: S(n.body, 400), view: S(n.view, 20), kind: S(n.kind, 20), at: +n.at || 0, read: n.read === true }));
+    renderSide(); if (route.name === 'notify') renderNotify();
+  }, () => {});
+}
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+const b64ToU8 = b => { const p = '='.repeat((4 - b.length % 4) % 4); const s = atob((b + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(s, c => c.charCodeAt(0)); };
+async function deviceId(endpoint) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint)); return 'd' + Array.from(new Uint8Array(h)).slice(0, 12).map(x => x.toString(16).padStart(2, '0')).join(''); }
+async function currentSub() { try { const reg = await navigator.serviceWorker.getRegistration(); return reg ? await reg.pushManager.getSubscription() : null; } catch (e) { return null; } }
+async function turnOnPush() {
+  const perm = await Notification.requestPermission(); if (perm !== 'granted') return { ok: false, msg: perm === 'denied' ? 'Notifications are blocked for Boothkeepr. Allow them in your phone settings (Settings, Notifications, Boothkeepr), then try again.' : 'Notifications were not allowed.' };
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(VAPID_PUBLIC) });
+  const j = sub.toJSON(); const id = await deviceId(j.endpoint);
+  await window.SKFB.setDoc(window.SKFB.doc(cloud.col('push'), id), { endpoint: S(j.endpoint, 1000), keys: { p256dh: S(j.keys.p256dh, 200), auth: S(j.keys.auth, 100) }, ua: S(navigator.userAgent, 200), at: Date.now() });
+  return { ok: true, msg: 'Notifications are on for this device.' };
+}
+async function turnOffPush() { const sub = await currentSub(); if (sub) { const id = await deviceId(sub.endpoint); try { await window.SKFB.deleteDoc(window.SKFB.doc(cloud.col('push'), id)); } catch (e) {} await sub.unsubscribe(); } }
+const t2 = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+let nstate = { sub: null, checked: false, msg: null };
+async function renderNotify() {
+  if (!nstate.checked && pushSupported()) { nstate.checked = true; nstate.sub = await currentSub(); }
+  const pr = nprefs(); const signed = mode === 'cloud' && cloud.user;
+  let dev;
+  if (!signed) dev = '<p>Reminders are worked out from your account, so <b>sign in first</b>. Then turn notifications on here.</p><div class="actions"><button class="primary" type="button" id="nSign">Sign in</button></div>';
+  else if (isIOS() && !isStandalone()) dev = '<p>On iPhone, notifications only work in the Boothkeepr app on your Home Screen. In Safari tap <b>Share → Add to Home Screen</b>, open Boothkeepr from that icon, and come back to this page.</p>';
+  else if (!pushSupported()) dev = '<p>This browser cannot show notifications. On iPhone, update to iOS 16.4 or later and use the Home Screen app.</p>';
+  else if (Notification.permission === 'denied') dev = '<p>Notifications are blocked for Boothkeepr on this device. Turn them on in your phone settings (Settings → Notifications → Boothkeepr), then come back.</p>';
+  else if (nstate.sub && Notification.permission === 'granted') dev = '<p class="syncline"><i class="dot paid"></i>Notifications are on for this device.</p><div class="actions"><button class="secondary" type="button" id="nTest">Show a test notification</button><button class="linkish" type="button" id="nOff">Turn off on this device</button></div>';
+  else dev = '<p>Get reminders on this device, even when Boothkeepr is closed.</p><div class="actions"><button class="primary" type="button" id="nOn">Turn on notifications</button></div>';
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const row = (id, on, title, sub, extra) => '<div class="nrow"><label class="switch"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '><span></span></label><div><b>' + title + '</b><p>' + sub + '</p>' + (extra || '') + '</div></div>';
+  $('view').innerHTML = '<div class="pagehead"><div><h1>Notifications</h1><p>Reminders about your jobs, the run sheet and invoices.</p></div></div>' +
+    '<section class="card"><h2>This device</h2>' + dev + (nstate.msg ? '<p class="status ' + nstate.msg.kind + '">' + esc(nstate.msg.text) + '</p>' : '') + '</section>' +
+    '<section class="card"><h2>What to remind me about</h2><div class="nrows">' +
+      row('nTom', pr.tomorrow.on, 'Tomorrow’s jobs', 'e.g. “2 jobs tomorrow: 6pm Karli – Abbotsford, 6:30pm Priya – Geelong”', '<label class="f inl">Send at<input type="time" id="nTomAt" value="' + t2(pr.tomorrow.at) + '"></label>') +
+      row('nConf', pr.confirm.on, 'Things to confirm', 'Pick-up or set-up times the run sheet marks “please confirm” or “??” for the next two days. Sent with tomorrow’s jobs.') +
+      row('nSheet', pr.sheet.on, 'Run sheet changes', 'New bookings, removed jobs, or changed times, addresses, booth or backdrop.') +
+      row('nInv', pr.invoice.on, 'Weekly invoice reminder', 'Skipped when that week’s invoice is already made.', '<div class="inlrow"><label class="f inl">Day<select id="nInvDay" class="sel">' + days.map((d, i) => '<option value="' + i + '"' + (i === pr.invoice.day ? ' selected' : '') + '>' + d + '</option>').join('') + '</select></label><label class="f inl">Time<input type="time" id="nInvAt" value="' + t2(pr.invoice.at) + '"></label></div>') +
+      row('nEv', pr.event.on, 'Event-day countdown', 'e.g. “1 h until set-up must start at Moon Dog OG” and “Time to leave”. Uses your route plan for the day when there is one.', '<label class="f inl">Remind me this many minutes before<input type="number" id="nLead" min="10" max="240" step="5" value="' + pr.event.lead + '"></label>') +
+      '<div class="nrow"><span></span><div><b>Quiet hours</b><p>No reminders in this time, except event-day countdowns.</p><div class="inlrow"><label class="f inl">From<input type="time" id="nQf" value="' + t2(pr.quiet.from) + '"></label><label class="f inl">To<input type="time" id="nQt" value="' + t2(pr.quiet.to) + '"></label></div></div></div>' +
+    '</div><div class="actions" style="margin-top:12px"><button class="primary" type="button" id="nSave">Save</button></div><p class="status" id="nSaveMsg" role="status"></p>' +
+    '<p class="hint">Reminders are checked every 10 minutes, so one can arrive a few minutes after the time you set.</p></section>' +
+    '<section class="card"><h2>Recent</h2>' + (notifs.length ? '<ul class="nlist">' + notifs.map(n => '<li class="' + (n.read ? '' : 'unread') + '"><button type="button" data-nv="' + esc(n.view) + '" data-nid="' + esc(n.id) + '"><span class="ntitle">' + esc(n.title) + '</span><span class="nbody">' + esc(n.body) + '</span><span class="nat">' + esc(ago(n.at)) + '</span></button></li>').join('') + '</ul>' : '<p class="empty">' + (signed ? 'Nothing yet. Reminders you get will also be listed here.' : 'Sign in to see your reminders here.') + '</p>') + '</section>';
+  if ($('nSign')) $('nSign').addEventListener('click', () => go({ name: 'account' }));
+  if ($('nOn')) $('nOn').addEventListener('click', async () => { $('nOn').disabled = true; try { const r = await turnOnPush(); nstate.msg = { text: r.msg, kind: r.ok ? 'ok' : 'bad' }; nstate.sub = await currentSub(); } catch (e) { nstate.msg = { text: 'Could not turn on notifications (' + (e.message || e) + ').', kind: 'bad' }; } renderNotify(); });
+  if ($('nOff')) $('nOff').addEventListener('click', async () => { await turnOffPush(); nstate.sub = null; nstate.msg = { text: 'Notifications are off for this device.', kind: 'ok' }; renderNotify(); });
+  if ($('nTest')) $('nTest').addEventListener('click', async () => { const reg = await navigator.serviceWorker.ready; reg.showNotification('Boothkeepr test', { body: 'Notifications are working on this device.', icon: 'icon-192.png', badge: 'icon-192.png', tag: 'test' }); });
+  $('nSave').addEventListener('click', () => {
+    const tm = id => parseClock($(id).value) ?? 0;
+    settings.notify = { tomorrow: { on: $('nTom').checked, at: tm('nTomAt') }, confirm: { on: $('nConf').checked }, sheet: { on: $('nSheet').checked }, invoice: { on: $('nInv').checked, day: +$('nInvDay').value, at: tm('nInvAt') }, event: { on: $('nEv').checked, lead: Math.min(240, Math.max(10, parseInt($('nLead').value, 10) || 60)) }, quiet: { from: tm('nQf'), to: tm('nQt') } };
+    saveSettings(); $('nSaveMsg').className = 'status ok'; $('nSaveMsg').textContent = signed ? 'Saved. Your reminders now follow these settings.' : 'Saved on this device. Sign in so the reminder service can use them.';
+  });
+  document.querySelectorAll('[data-nid]').forEach(b => b.addEventListener('click', () => { const v = b.dataset.nv; if (['runsheet', 'route', 'messages', 'edit', 'dash'].includes(v)) { if (v === 'edit') $('navNew').click(); else go({ name: v }); } }));
+  // opening this page marks everything as read
+  // mark shown ones as read once; the write comes back through the listener, so never re-render from here
+  if (signed) { const todo = notifs.filter(n => !n.read && !markedRead.has(n.id)).slice(0, 20); todo.forEach(n => markedRead.add(n.id));
+    if (todo.length) setTimeout(() => todo.forEach(n => { window.SKFB.updateDoc(window.SKFB.doc(cloud.col('notifications'), n.id), { read: true }).catch(() => { markedRead.delete(n.id); }); }), 1500); }
+}
+// opened from a notification: ?go=route etc.
+(function openFromNotification() { const v = new URLSearchParams(location.search).get('go'); if (!v) return; history.replaceState(null, '', location.pathname);
+  setTimeout(() => { if (v === 'edit') $('navNew').click(); else if (['runsheet', 'route', 'messages', 'dash', 'notify'].includes(v)) go({ name: v }); }, 600); })();
 
 /* ---------- password-protected share links ----------
    The invoice is encrypted in the browser (AES-GCM, key from the password with PBKDF2) and the result

@@ -39,6 +39,25 @@ service cloud.firestore {
           && str(request.resource.data.text, 1000) && optStr(request.resource.data, 'to', 20) && optStr(request.resource.data, 'job', 200);
         allow update: if false;
       }
+      match /push/{id} {
+        // this person's phones and computers that asked for notifications
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && id.matches('d[0-9a-f]{24}')
+          && request.resource.data.keys().hasOnly(['endpoint', 'keys', 'ua', 'at'])
+          && str(request.resource.data.endpoint, 1000) && request.resource.data.endpoint.matches('https://.*')
+          && request.resource.data.keys is map && request.resource.data.keys.keys().hasOnly(['p256dh', 'auth'])
+          && str(request.resource.data.keys.p256dh, 200) && str(request.resource.data.keys.auth, 100) && optStr(request.resource.data, 'ua', 200);
+      }
+      match /notifications/{id} {
+        // written only by the reminder service; the person can read them, mark them read, or delete them
+        allow read, delete: if isOwner(uid);
+        allow update: if isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']) && request.resource.data.read is bool;
+        allow create: if false;
+      }
+      match /server/{docId} {
+        // reminder service bookkeeping; only the server (admin) can touch it
+        allow read, write: if false;
+      }
       match /private/{docId} {
         allow read: if isOwner(uid);
         allow write: if isOwner(uid) && (docId in ['profile', 'settings'] || (docId.matches('plan-[0-9]{4}-[0-9]{2}-[0-9]{2}') && request.resource.data.keys().hasOnly(['date', 'json', 'at']) && str(request.resource.data.json, 900000)));
