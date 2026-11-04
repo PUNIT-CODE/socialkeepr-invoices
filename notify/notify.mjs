@@ -45,15 +45,24 @@ for (const u of users.docs) {
     for (const d of [now.iso, addDays(now.iso, -1)]) { const p = await ref.collection('private').doc('plan-' + d).get(); if (p.exists) { try { plans[d] = JSON.parse(p.data().json || 'null'); } catch (e) {} } }
     const st = stateSnap.exists ? stateSnap.data() : {};
     const out = due({ now, jobs, prefs: settings.notify, invoices: invSnap.docs.map(d => d.data()), plans, route: settings.route, state: { sent: st.sent || {}, jobs: st.jobs ? JSON.parse(st.jobs) : null } });
+    // "Send me a test reminder" from the Notifications page (requested in the last 2 hours, not yet sent)
+    const testAt = settings.notify && typeof settings.notify.testAt === 'number' ? settings.notify.testAt : 0;
+    let testDone = st.testDone || 0;
+    if (testAt > testDone && Date.now() - testAt < 2 * 3600e3) {
+      const tmr = addDays(now.iso, 1); const nTmr = jobs.filter(j => j.date === tmr).length; const nToday = jobs.filter(j => j.date === now.iso).length;
+      out.notes.unshift({ key: 'test-' + testAt, kind: 'test', view: 'notify', title: 'Boothkeepr test reminder',
+        body: 'Reminders reach this device. Run sheet: ' + nToday + ' job' + (nToday === 1 ? '' : 's') + ' today, ' + nTmr + ' tomorrow.' });
+      testDone = testAt;
+    }
     for (const n of out.notes) {
       const doc = { title: n.title, body: n.body, kind: n.kind, view: n.view || '', at: Date.now(), read: false };
       await ref.collection('notifications').doc(n.key.replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 140)).set(doc);
       for (const sub of pushSnap.docs) {
-        try { await webpush.sendNotification({ endpoint: sub.data().endpoint, keys: sub.data().keys }, JSON.stringify({ title: n.title, body: n.body, view: n.view || '', tag: n.kind }), { TTL: n.kind === 'event' ? 1800 : 6 * 3600, urgency: n.kind === 'event' ? 'high' : 'normal' }); sentCount++; }
+        try { await webpush.sendNotification({ endpoint: sub.data().endpoint, keys: sub.data().keys }, JSON.stringify({ title: n.title, body: n.body, view: n.view || '', tag: n.kind }), { TTL: n.kind === 'event' ? 1800 : 6 * 3600, urgency: n.kind === 'event' || n.kind === 'test' ? 'high' : 'normal' }); sentCount++; }
         catch (e) { if (e.statusCode === 404 || e.statusCode === 410) await sub.ref.delete(); else console.log('push failed', e.statusCode || e.message); }
       }
     }
-    await ref.collection('server').doc('state').set({ sent: out.state.sent, jobs: JSON.stringify(out.state.jobs || {}), at: Date.now() });
+    await ref.collection('server').doc('state').set({ sent: out.state.sent, jobs: JSON.stringify(out.state.jobs || {}), testDone, at: Date.now() });
     // tidy: keep in-app notifications for 30 days
     const old = await ref.collection('notifications').where('at', '<', Date.now() - 30 * 864e5).limit(50).get(); for (const d of old.docs) await d.ref.delete();
   } catch (e) { console.log('person skipped:', e.message); }
