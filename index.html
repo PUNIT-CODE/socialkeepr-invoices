@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-XkJ/EXNreE8dYfW2rz12CcSJ3eibpN/llaq51EpEUHo=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-DS1rsKpXUg3Sqa/7PjnAm35sZTKxuLQVbtOeA7iSCjs=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -422,6 +422,8 @@ button.danger:hover { border-color: var(--warn); }
 .sp-strip i { width: 26px; height: 20px; border-radius: 3px; background: rgba(255,255,255,.1); animation: spShot 2.4s ease-in-out infinite; }
 .sp-strip i:nth-child(2) { animation-delay: .3s; } .sp-strip i:nth-child(3) { animation-delay: .6s; } .sp-strip i:nth-child(4) { animation-delay: .9s; }
 @keyframes spShot { 0%, 100% { background: rgba(255,255,255,.1); } 6% { background: #fff; } 16%, 62% { background: linear-gradient(135deg, #8b3dff, #ff3ea5 55%, #ff9a3c); } 80% { background: rgba(255,255,255,.1); } }
+.sp-slow { max-width: 280px; text-align: center; font: 13px/1.4 system-ui, -apple-system, sans-serif; color: rgba(243,238,246,.75); }
+.sp-skip { font: 600 14px system-ui, -apple-system, sans-serif; color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); border-radius: 999px; padding: 10px 20px; cursor: pointer; }
 .sp-status { min-height: 1.2em; font: 13px/1.2 system-ui, -apple-system, sans-serif; color: rgba(243,238,246,.62); opacity: 0; animation: spFade .5s ease 1.4s forwards; text-align: center; }
 @media (prefers-reduced-motion: reduce) {
   .splash *, .splash *::before { animation-duration: .01s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }
@@ -471,13 +473,23 @@ const FIREBASE_CONFIG = {"apiKey":"AIzaSyD6xIcuu8cjxL-fHiuBta1XAMuPR8IEgok","aut
 const OCR_BASE = "ocr/";
 document.getElementById('brandLogo').src = LOGO;
 
-// start screen: stays until the account has loaded (or 7 s at most), shown for at least the intro
+// start screen: stays until sign-in is known and the account's data has arrived from the server
+// (invoices, details, settings and a fresh copy of the run sheet). Offline, the saved copy is enough.
 const splash = (() => {
-  const el = document.getElementById('splash'); const t0 = performance.now(); let done = false, soonT = null;
+  const el = document.getElementById('splash'); const t0 = performance.now(); let done = false;
   const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; const MIN = reduce ? 250 : 1900;
-  const hide = () => { if (done || !el) return; done = true; setTimeout(() => { el.classList.add('out'); el.setAttribute('aria-hidden', 'true'); setTimeout(() => el.remove(), 650); }, Math.max(0, MIN - (performance.now() - t0))); };
-  setTimeout(hide, 7000);
-  return { hide, status(t) { const s = document.getElementById('spStatus'); if (!done && s) s.textContent = t; }, soon(ms) { if (!soonT) soonT = setTimeout(hide, ms); } };
+  const waiting = new Set(['auth']); let goneResolve; const gone = new Promise(r => { goneResolve = r; });
+  const LABEL = { auth: 'Signing you in…', invoices: 'Loading your invoices…', profile: 'Loading your details…', settings: 'Loading your settings…', sheet: 'Checking the run sheet for changes…' };
+  const ORDER = ['auth', 'invoices', 'profile', 'settings', 'sheet'];
+  const say = t => { const st = document.getElementById('spStatus'); if (!done && st) st.textContent = t; };
+  const hide = () => { if (done || !el) { goneResolve(); return; } done = true;
+    setTimeout(() => { el.classList.add('out'); el.setAttribute('aria-hidden', 'true'); setTimeout(() => { el.remove(); goneResolve(); }, 650); }, Math.max(0, MIN - (performance.now() - t0))); };
+  const check = () => { if (done) return; if (!waiting.size) return hide(); const next = ORDER.find(k => waiting.has(k)); if (next) say(LABEL[next]); };
+  // a very slow connection must not trap anyone: offer a way in after 15 s, and let go after 60 s
+  setTimeout(() => { if (done || !el) return; const box = el.querySelector('.sp-center'); const b = document.createElement('button'); b.type = 'button'; b.className = 'sp-skip'; b.textContent = 'Open anyway';
+    b.addEventListener('click', hide); const n = document.createElement('div'); n.className = 'sp-slow'; n.textContent = 'This is taking longer than usual. Your data keeps loading in the background.'; box.append(n, b); }, 15000);
+  setTimeout(hide, 60000);
+  return { need(...k) { k.forEach(x => waiting.add(x)); check(); }, ok(...k) { k.forEach(x => waiting.delete(x)); check(); }, status: say, hide() { waiting.clear(); hide(); }, gone, get open() { return !done; } };
 })();
 
 /* ---------- small helpers ---------- */
@@ -1148,10 +1160,15 @@ async function loadMonth(y, m, force) {
   if (cached && !force && Date.now() - cached.at < 60 * 1000) return Object.assign({ key }, cached);
   if (force === 'bg' && !cached && tabMissAt[key] && Date.now() - tabMissAt[key] < 10 * 60 * 1000) return { key, jobs: [], notab: true };
   try {
-    for (const tab of tabNames(y, m)) {
-      const jobs = jobsFromGrid(await gvizGrid(id, tab));
-      const inMonth = jobs.filter(j => j.date.slice(0, 7) === key);
-      if (inMonth.length && inMonth.length >= jobs.length / 2) { if (cached) recordChanges(cached.jobs, inMonth); sheetCache[key] = { at: Date.now(), jobs: inMonth, src: 'Google Sheet, tab ' + tab }; saveSheetCache(); return Object.assign({ key }, sheetCache[key]); }
+    // try the naming style that worked last time first, then the others a few at a time
+    const names = tabNames(y, m); const pi = store.get('tabStyle', 0); const order = names.map((t, i) => i).sort((a, b) => (a === pi ? -1 : b === pi ? 1 : a - b));
+    for (let k = 0; k < order.length; k += (k === 0 ? 1 : 5)) {
+      const batch = k === 0 ? [order[0]] : order.slice(k, k + 5);
+      const got = await Promise.allSettled(batch.map(i => gvizGrid(id, names[i])));
+      if (got.every(g => g.status === 'rejected')) throw got[0].reason;
+      for (let n = 0; n < batch.length; n++) { if (got[n].status !== 'fulfilled') continue; const tab = names[batch[n]];
+        const jobs = jobsFromGrid(got[n].value); const inMonth = jobs.filter(j => j.date.slice(0, 7) === key);
+        if (inMonth.length && inMonth.length >= jobs.length / 2) { store.set('tabStyle', batch[n]); if (cached) recordChanges(cached.jobs, inMonth); sheetCache[key] = { at: Date.now(), jobs: inMonth, src: 'Google Sheet, tab ' + tab }; saveSheetCache(); return Object.assign({ key }, sheetCache[key]); } }
     }
     tabMissAt[key] = Date.now();
     return Object.assign({ key, jobs: [], notab: true }, cached ? { jobs: cached.jobs, at: cached.at, src: cached.src } : {});
@@ -1665,9 +1682,8 @@ function saveSettings() { store.set('settings', settings); if (mode === 'cloud')
 const cloud = {
   ready: false, user: null, fs: null, auth: null, unsub: [], status: 'off',
   async init() {
-    if (!FIREBASE_CONFIG || window.claude || shareToken) { splash.hide(); return; }
-    splash.status('Signing you in…');
-    try { await loadLib('fb', 'SKFB'); } catch (e) { this.status = 'unavailable'; renderSide(); splash.hide(); return; }
+    if (!FIREBASE_CONFIG || window.claude || shareToken) { splash.ok('auth'); return; }
+    try { await loadLib('fb', 'SKFB'); } catch (e) { this.status = 'unavailable'; renderSide(); splash.ok('auth'); return; }
     const F = window.SKFB; const app = F.initializeApp(FIREBASE_CONFIG);
     this.auth = F.initializeAuth(app, { persistence: [F.indexedDBLocalPersistence, F.browserLocalPersistence], popupRedirectResolver: F.browserPopupRedirectResolver });
     this.fs = F.initializeFirestore(app, { localCache: F.persistentLocalCache({ tabManager: F.persistentMultipleTabManager() }) });
@@ -1678,8 +1694,8 @@ const cloud = {
   col(name) { return window.SKFB.collection(this.fs, 'users', this.user.uid, name); },
   async onUser(u) {
     const F = window.SKFB; this.unsub.forEach(f => f()); this.unsub = [];
-    if (!u) { splash.hide(); this.user = null; this.status = 'signedout'; if (mode === 'cloud') { mode = 'local'; invoices = cleanList(store.get('invoices', [])); profile.name = store.get('profile', {}).name || ''; profile.tfn = store.get('profile', {}).tfn || ''; } loaded = true; render(); return; }
-    this.user = u; mode = 'cloud'; loaded = false; this.status = 'syncing'; render(); splash.status('Syncing your jobs and invoices…');
+    if (!u) { splash.ok('auth'); this.user = null; this.status = 'signedout'; if (mode === 'cloud') { mode = 'local'; invoices = cleanList(store.get('invoices', [])); profile.name = store.get('profile', {}).name || ''; profile.tfn = store.get('profile', {}).tfn || ''; } loaded = true; render(); return; }
+    this.user = u; mode = 'cloud'; loaded = false; this.status = 'syncing'; render(); splash.need('invoices', 'profile', 'settings', 'sheet'); splash.ok('auth');
     // member record (role is set to staff here; a manager role can only be given from the Firebase console)
     try { const me = await F.getDoc(window.SKFB.doc(this.fs, 'users', u.uid)); const base = { email: u.email || '', name: u.displayName || profile.name || '', updatedAt: new Date().toISOString() };
       if (!me.exists()) await F.setDoc(window.SKFB.doc(this.fs, 'users', u.uid), Object.assign({ role: 'staff', createdAt: base.updatedAt }, base)); else await F.updateDoc(window.SKFB.doc(this.fs, 'users', u.uid), base); } catch (e) {}
@@ -1687,14 +1703,21 @@ const cloud = {
     this.unsub.push(F.onSnapshot(this.col('invoices'), { includeMetadataChanges: true }, snap => {
       invoices = cleanList(snap.docs.map(d => d.data())); loaded = true;
       this.status = snap.metadata.fromCache ? (navigator.onLine ? 'syncing' : 'offline') : (snap.metadata.hasPendingWrites ? 'syncing' : 'synced');
-      if (!snap.metadata.fromCache) splash.hide(); else if (!navigator.onLine) { splash.status('Offline: showing your saved copy'); splash.hide(); } else splash.soon(2500);
-      if (first) { first = false; this.migrate(); }
+      if (!snap.metadata.fromCache || !navigator.onLine) splash.ok('invoices');
+      if (first) { first = false; splash.gone.then(() => this.migrate()); }
       if (route.name === 'edit') renderSide(); else render();
-    }, () => { this.status = 'error'; renderSide(); }));
+    }, () => { this.status = 'error'; renderSide(); splash.ok('invoices'); }));
     this.unsub.push(F.onSnapshot(window.SKFB.doc(this.fs, 'users', u.uid), s => { const m = s.data() || {}; this.member = Object.assign({}, m, { name: S(m.name, 40), photo: safePhoto(m.photo), phone: S(m.phone, 20) }); renderSide(); if (route.name === 'account' && !$('pfName')) render(); }));
     setTimeout(watchNotifs, 0);
-    this.unsub.push(F.onSnapshot(this.ref('private', 'profile'), s => { const d = s.data(); if (d) { profile.name = S(d.name, 80); profile.tfn = S(d.tfn, 20); if (route.name !== 'edit') render(); } }));
-    this.unsub.push(F.onSnapshot(this.ref('private', 'settings'), s => { const d = s.data(); if (d) { settings = cleanSettings(d); if (d.sheetLink != null) sheetCfg.link = settings.sheetLink; } }));
+    const fresh = s => !s.metadata.fromCache || !navigator.onLine; let profSeen = false;
+    this.unsub.push(F.onSnapshot(this.ref('private', 'profile'), { includeMetadataChanges: true }, s => { const d = s.data(); if (d) { const n = S(d.name, 80), t = S(d.tfn, 20); const changed = n !== profile.name || t !== profile.tfn || !s.metadata.fromCache && !profSeen; profile.name = n; profile.tfn = t; if (changed && route.name !== 'edit') render(); } if (!s.metadata.fromCache) profSeen = true; if (fresh(s)) splash.ok('profile'); }, () => splash.ok('profile')));
+    let sheetStarted = false;
+    this.unsub.push(F.onSnapshot(this.ref('private', 'settings'), { includeMetadataChanges: true }, s => { const d = s.data(); if (d) { settings = cleanSettings(d); if (d.sheetLink != null) sheetCfg.link = settings.sheetLink; }
+      if (!fresh(s)) return; splash.ok('settings');
+      // the account's settings hold the run sheet link: fetch the latest run sheet before the app opens
+      if (!sheetStarted) { sheetStarted = true; if (!sheetIdOf(sheetCfg.link) || !navigator.onLine) splash.ok('sheet');
+        else { const cap = setTimeout(() => splash.ok('sheet'), 8000); syncSheet().catch(() => {}).finally(() => { clearTimeout(cap); splash.ok('sheet'); if (['runsheet', 'route', 'messages', 'dash'].includes(route.name)) render(); }); } }
+    }, () => { splash.ok('settings', 'sheet'); }));
   },
   async migrate() { // copy what was saved on this device before signing in, once per account
     const key = 'migrated.' + this.user.uid; if (store.get(key, false)) return;
@@ -2529,14 +2552,17 @@ function wireMismatch() {
 function planSig(jobs) { return jobs.filter(j => j.include).map(j => j.key + '~' + [j.booth, j.setup, j.pickup, j.addr].join('|')).sort().join('#'); }
 
 let lastSheetSync = 0, sheetSyncing = false;
-async function syncSheet() {
+let sheetSyncP = null;
+function syncSheet() { if (sheetSyncing && sheetSyncP) return sheetSyncP; sheetSyncP = syncSheetRun(); return sheetSyncP; }
+async function syncSheetRun() {
   if (sheetSyncing || !sheetIdOf(sheetCfg.link) || !canReachGoogle || !navigator.onLine || shareToken) return;
   sheetSyncing = true; freshChanges = [];
   try {
     const now = new Date(); const months = [[now.getFullYear(), now.getMonth()], [now.getFullYear(), now.getMonth() + 1]];
     if (now.getDate() <= 10) months.unshift([now.getFullYear(), now.getMonth() - 1]);
     const keys = [];
-    for (const [y0, m0] of months) { const d = new Date(y0, m0, 1); const r = await loadMonth(d.getFullYear(), d.getMonth(), 'bg'); if (r && !r.error && !r.notab) keys.push(r.key); }
+    const got = await Promise.all(months.map(([y0, m0]) => { const d = new Date(y0, m0, 1); return loadMonth(d.getFullYear(), d.getMonth(), 'bg').catch(() => null); }));
+    got.forEach(r => { if (r && !r.error && !r.notab) keys.push(r.key); });
     lastSheetSync = Date.now();
     // point the open pages at the fresh copy
     [rs, ms, rt].forEach(st => { if (st.data && keys.includes(st.data.key) && sheetCache[st.data.key]) st.data = Object.assign({ key: st.data.key }, sheetCache[st.data.key]); });
