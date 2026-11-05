@@ -19,17 +19,20 @@ async function sheetJobs(link) {
   if (sheetCache.has(id)) return sheetCache.get(id);
   const months = []; const d0 = new Date(now.iso + 'T00:00:00Z');
   for (const k of [-1, 0, 1]) { const d = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + k, 1)); months.push([d.getUTCFullYear(), d.getUTCMonth()]); }
-  let all = [];
+  let all = [], spill = [];
   for (const [y, mo] of months) {
     const key = y + '-' + String(mo + 1).padStart(2, '0');
     for (const tab of tabNames(y, mo)) {
       try {
         const res = await fetch('https://docs.google.com/spreadsheets/d/' + id + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(tab));
         if (!res.ok) break; const jobs = jobsFromGrid(csvRows(await res.text())); const inMonth = jobs.filter(j => j.date.slice(0, 7) === key);
-        if (inMonth.length && inMonth.length >= jobs.length / 2) { all = all.concat(inMonth); break; }
+        if (inMonth.length && inMonth.length >= jobs.length / 2) { all = all.concat(inMonth); spill = spill.concat(jobs.filter(j => j.date.slice(0, 7) !== key)); break; }
       } catch (e) { break; }
     }
   }
+  // jobs a tab lists for the neighbouring month (e.g. 1 Dec at the bottom of NOV26), unless that month's own tab has them
+  const sk = j => j.date + '|' + String(j.client || '').toLowerCase().replace(/[^a-z]/g, '');
+  const have = new Set(all.map(sk)); for (const j of spill) if (!have.has(sk(j))) { have.add(sk(j)); all.push(j); }
   sheetCache.set(id, all); return all;
 }
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-DS1rsKpXUg3Sqa/7PjnAm35sZTKxuLQVbtOeA7iSCjs=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-er5LoAx4RyJRcpAufcLs0ydLFCgWhJhc8tLNLxw7Swo=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -1152,7 +1152,17 @@ function gvizGridScript(id, tab) {
 const sheetCache = store.get('sheetCache', {}); // key "2026-10" -> { at, jobs }
 function saveSheetCache() { store.set('sheetCache', sheetCache); }
 const tabMissAt = {}; // months whose tab was not found, so background checks do not keep asking
-async function loadMonth(y, m, force) {
+// Jobs for one month. A tab sometimes also lists jobs from the next or previous month (for example
+// a 1 December job written at the bottom of NOV26 before a DEC26 tab exists). Those are kept as "spill"
+// and added to the month they belong to, unless that month's own tab already has the same job.
+const spillKey = j => j.date + '|' + shopKey(j.client);
+function withSpill(r) {
+  if (!r || !r.key) return r; const own = r.jobs || []; const have = new Set(own.map(spillKey)); const add = [];
+  Object.keys(sheetCache).forEach(k => { if (k === r.key) return; (sheetCache[k].spill || []).forEach(j => { if (j && j.date && j.date.slice(0, 7) === r.key && !have.has(spillKey(j))) { have.add(spillKey(j)); add.push(j); } }); });
+  return add.length ? Object.assign({}, r, { jobs: own.concat(add).sort((x, y) => x.date.localeCompare(y.date)) }) : r;
+}
+async function loadMonth(y, m, force) { return withSpill(await loadMonthRaw(y, m, force)); }
+async function loadMonthRaw(y, m, force) {
   const key = y + '-' + String(m + 1).padStart(2, '0');
   const cached = sheetCache[key];
   const id = sheetIdOf(sheetCfg.link);
@@ -1168,7 +1178,7 @@ async function loadMonth(y, m, force) {
       if (got.every(g => g.status === 'rejected')) throw got[0].reason;
       for (let n = 0; n < batch.length; n++) { if (got[n].status !== 'fulfilled') continue; const tab = names[batch[n]];
         const jobs = jobsFromGrid(got[n].value); const inMonth = jobs.filter(j => j.date.slice(0, 7) === key);
-        if (inMonth.length && inMonth.length >= jobs.length / 2) { store.set('tabStyle', batch[n]); if (cached) recordChanges(cached.jobs, inMonth); sheetCache[key] = { at: Date.now(), jobs: inMonth, src: 'Google Sheet, tab ' + tab }; saveSheetCache(); return Object.assign({ key }, sheetCache[key]); } }
+        if (inMonth.length && inMonth.length >= jobs.length / 2) { store.set('tabStyle', batch[n]); if (cached) recordChanges(cached.jobs, inMonth); sheetCache[key] = { at: Date.now(), jobs: inMonth, spill: jobs.filter(j => j.date && j.date.slice(0, 7) !== key), src: 'Google Sheet, tab ' + tab }; saveSheetCache(); return Object.assign({ key }, sheetCache[key]); } }
     }
     tabMissAt[key] = Date.now();
     return Object.assign({ key, jobs: [], notab: true }, cached ? { jobs: cached.jobs, at: cached.at, src: cached.src } : {});
@@ -1180,8 +1190,9 @@ async function loadMonth(y, m, force) {
 async function jobsForWeek(ws, force) {
   const we = addDays(ws, 6); const a = dateOf(ws), b = dateOf(we);
   const months = [[a.getFullYear(), a.getMonth()]]; if (b.getMonth() !== a.getMonth()) months.push([b.getFullYear(), b.getMonth()]);
-  const res = []; for (const [y, m] of months) res.push(await loadMonth(y, m, force));
-  const jobs = res.flatMap(r => r.jobs || []).filter(j => j.date >= ws && j.date <= we).sort((x, y) => x.date.localeCompare(y.date));
+  const raw = []; for (const [y, m] of months) raw.push(await loadMonthRaw(y, m, force));
+  const res = raw.map(withSpill); // after both months are in, so spill from either side is seen
+  const seen = new Set(); const jobs = res.flatMap(r => r.jobs || []).filter(j => j.date >= ws && j.date <= we && !seen.has(jobKey(j)) && seen.add(jobKey(j))).sort((x, y) => x.date.localeCompare(y.date));
   return { jobs, res };
 }
 function sheetProblem(res) {
