@@ -7,6 +7,31 @@ service cloud.firestore {
     function str(v, n) { return v is string && v.size() <= n; }
     function optStr(d, k, n) { return !(k in d) || str(d[k], n); }
 
+    // Receipt photos for share links. Each photo is encrypted on the sender's device; the key is only inside the
+    // password-locked link, so a stored copy is useless on its own. Anyone with the exact id can fetch the
+    // encrypted copy until the link expires; nobody can list them; only the sender can create or delete them.
+    match /shares/{sid} {
+      allow get: if sid.matches('s[A-Za-z0-9_-]{10,30}') && resource.data.exp > request.time;
+      allow list, update: if false;
+      allow create: if request.auth != null && sid.matches('s[A-Za-z0-9_-]{10,30}')
+        && request.resource.data.keys().hasOnly(['owner', 'exp', 'n', 'at'])
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.exp is timestamp && request.resource.data.exp < request.time + duration.value(400, 'd')
+        && request.resource.data.n is int && request.resource.data.n <= 50;
+      allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+      match /files/{fid} {
+        allow get: if resource.data.exp > request.time;
+        allow list, update: if false;
+        allow create: if request.auth != null && fid.matches('f[0-9]{1,2}')
+          && get(/databases/$(database)/documents/shares/$(sid)).data.owner == request.auth.uid
+          && request.resource.data.keys().hasOnly(['owner', 'exp', 'iv', 'c'])
+          && request.resource.data.owner == request.auth.uid
+          && request.resource.data.exp == get(/databases/$(database)/documents/shares/$(sid)).data.exp
+          && str(request.resource.data.iv, 40) && str(request.resource.data.c, 1000000);
+        allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+      }
+    }
+
     match /users/{uid} {
       function validMember(d) {
         return d.keys().hasOnly(['email', 'name', 'photo', 'phone', 'role', 'createdAt', 'updatedAt'])

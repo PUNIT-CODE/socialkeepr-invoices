@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-er5LoAx4RyJRcpAufcLs0ydLFCgWhJhc8tLNLxw7Swo=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-vj4zpiYnLUMDp56ud6P93LIMBwHtYMcsqnpxxZOdyvE=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -184,6 +184,7 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 .rcpt { display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); }
 .rcpt img { width: 90px; border-radius: 6px; border: 1px solid var(--line); }
 .rcptf { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.rcptf .rnote { grid-column: 1 / -1; margin: 0; }
 .rcptf select, .rcptf input { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; width: 100%; }
 #rcptBox .actions { margin-top: 12px; }
 .rowbtns { white-space: nowrap; }
@@ -390,6 +391,29 @@ button.danger:hover { border-color: var(--warn); }
 .kv dt { color: var(--muted); } .kv dd { margin: 0; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 
+
+/* receipt gallery in share links */
+.galcard { margin-top: 18px; } .galcard h2 { margin-bottom: 4px; }
+.galgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 12px; }
+.galthumb { display: flex; flex-direction: column; gap: 6px; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--field); overflow: hidden; cursor: zoom-in; text-align: left; font: inherit; color: var(--fg); }
+.galthumb img, .galph { width: 100%; aspect-ratio: 3 / 4; object-fit: contain; display: block; background: #fff; border-bottom: 1px solid var(--line); }
+.galph { background: var(--line); }
+.galthumb.loading .galph { animation: galPulse 1.2s ease-in-out infinite alternate; } @keyframes galPulse { to { opacity: .45; } }
+.galph.bad { display: grid; place-items: center; font-size: 12px; color: var(--muted); aspect-ratio: 3 / 4; }
+.galthumb em { font-style: normal; font-size: 12px; padding: 0 10px 10px; color: var(--muted); }
+.galthumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gal { position: fixed; inset: 0; z-index: 200; background: #0b090d; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100vh; height: 100dvh; color: #fff; animation: galIn .18s ease; }
+@keyframes galIn { from { opacity: 0; } }
+.galtop { display: flex; justify-content: space-between; align-items: center; padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 6px; }
+.galcount { font-size: 14px; opacity: .8; font-variant-numeric: tabular-nums; }
+.galx { font-size: 30px; line-height: 1; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; cursor: pointer; }
+.galstage { min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 6px 12px; touch-action: pan-y pinch-zoom; }
+.galstage img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 6px; background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.galnav { position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border: 0; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff; font-size: 30px; cursor: pointer; }
+.galnav.prev { left: 10px; } .galnav.next { right: 10px; } .galnav:hover, .galx:hover { background: rgba(255,255,255,.24); }
+@media (max-width: 600px) { .galnav { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); transform: none; width: 44px; height: 44px; } .galcap { padding-left: 64px !important; padding-right: 64px !important; min-height: 44px; } }
+.galcap { padding: 10px 16px calc(env(safe-area-inset-bottom, 0px) + 16px); text-align: center; display: flex; flex-direction: column; gap: 3px; } .galcap span { font-size: 13px; opacity: .75; }
+body.noscroll { overflow: hidden; }
 /* ---------- start screen: covers the app while the account loads ---------- */
 .splash { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: #0f0d12; color: #f3eef6; overflow: hidden; transition: opacity .5s ease, transform .6s cubic-bezier(.2,.7,.2,1), filter .5s ease; }
 .splash.out { opacity: 0; transform: scale(1.06); filter: blur(6px); pointer-events: none; }
@@ -1605,7 +1629,9 @@ function parseReceiptText(data) {
   cands.sort((a, b) => (b.h - a.h) || (a.y - b.y));
   const top = cands.filter(l => l.y < maxY * 0.6);
   const merchant = ((top[0] || cands[0] || {}).t || '').replace(/[|_]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
-  return { amount, date, merchant, text };
+  const qm = text.match(/\b(?:qty|quantity)\s*[:=]?\s*(\d{1,2})\b/i) || text.match(/\b(\d{1,2})\s*[x×@]\s*\$?\s*\d/);
+  const qtyRead = qm && +qm[1] >= 1 && +qm[1] <= 50 ? +qm[1] : 0;
+  return { amount, date, merchant, text, qtyRead };
 }
 const shopKey = s => String(s || '').toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim().split(' ').slice(0, 2).join(' ');
 function guessCategory(merchant) {
@@ -1617,8 +1643,81 @@ function guessCategory(merchant) {
 }
 function categoryOptions() { const opts = ['Fuel', 'Uber']; extraItems().forEach(x => { if (!/attendant/i.test(x.desc) && !opts.some(o => o.toLowerCase() === x.desc.toLowerCase())) opts.push(x.desc); }); return opts; }
 
+// ----- reading fuel dockets, and filling quantities from past invoices -----
+const round3 = n => Math.round((n + Number.EPSILON) * 1000) / 1000;
+const trimNum = (n, d) => String(+n.toFixed(d));
+// fuel: litres, price per litre and the total, from the words on the docket
+function parseFuel(text, amount) {
+  const t = String(text || '').replace(/(\d),(\d{1,3})(?!\d)/g, '$1.$2'); const n = s => parseFloat(String(s).replace(',', '.'));
+  let litres = null, ppl = null;
+  const lm = t.match(/(?:litres?|liters?|volume|vol|qty|quantity|ltrs?)\s*[:=]?\s*(\d{1,3}\.\d{1,3})/i) || t.match(/(\d{1,3}\.\d{1,3})\s*(?:L|LT|LTR|LTRS|LITRES?|LITERS?)\b(?!\s*\/)/i);
+  if (lm && n(lm[1]) >= 1 && n(lm[1]) <= 250) litres = n(lm[1]);
+  const pm = t.match(/\$?\s*(\d\.\d{2,4})\s*(?:\/|per\s*)\s*(?:L|LT|LTR|litre|liter)\b/i) || t.match(/(?:price|unit\s*price|ppl|rate|@)\s*[:=]?\s*\$?\s*(\d\.\d{2,4})\b/i);
+  const cm = t.match(/(\d{3}(?:\.\d{1,2})?)\s*c(?:ents?|pl)?\s*(?:\/|per)?\s*(?:L|LT|litre|liter)\b/i);
+  if (pm && n(pm[1]) >= 1 && n(pm[1]) <= 4) ppl = n(pm[1]); else if (cm && n(cm[1]) >= 100 && n(cm[1]) <= 400) ppl = n(cm[1]) / 100;
+  // the total: a money figure that agrees with litres x price, or the one next to TOTAL / EFTPOS
+  if (litres && ppl) { const want = litres * ppl; const vals = (t.match(/\d{1,4}\.\d{2}\b/g) || []).map(Number).filter(v => Math.abs(v - want) <= Math.max(0.06, want * 0.01)); if (vals.length) amount = vals.sort((a, b) => Math.abs(a - want) - Math.abs(b - want))[0]; }
+  const tm = t.match(/(?:total|amount\s*due|eftpos|sale|paid|purchase)\D{0,18}\$?\s*(\d{1,4}\.\d{2})\b/i); if (amount == null && tm) amount = Number(tm[1]);
+  // a misread digit in the litres (e.g. 41.10 read as 41.16): when the paid amount and the price per litre agree with each other, trust them
+  if (litres && ppl && amount != null && Math.abs(litres * ppl - amount) > 0.03) { const fixL = amount / ppl; if (Math.abs(fixL - litres) / litres < 0.05) litres = Math.round(fixL * 100) / 100; }
+  return { litres, ppl, amount };
+}
+const baseDesc = d => String(d || '').replace(/\s*\((?:[ivxl]+|\d+)\)\s*$/i, '').trim().toLowerCase();
+// the newest saved invoice line with this name that has a quantity and a price (e.g. last fuel price, price per album)
+function historyOf(cat) {
+  const want = baseDesc(cat); if (!want) return null;
+  const list = invoices.slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || (b.no || 0) - (a.no || 0));
+  for (const inv of list) { const rs = (inv.rows || []).filter(r => baseDesc(r.desc) === want && num(r.qty) > 0 && num(r.rate) > 0); if (!rs.length) continue;
+    // several lines of the same thing (Fuel (i), Fuel (ii)): use that invoice's average price
+    const q = rs.reduce((a, r) => a + num(r.qty), 0), amt = rs.reduce((a, r) => a + num(r.qty) * num(r.rate), 0);
+    return { rate: rs.length > 1 ? round3(amt / q) : num(rs[0].rate), unit: S(rs[0].unit, 20), no: inv.no, date: inv.date, avg: rs.length > 1 }; }
+  return null;
+}
+// work out litres / quantity for one receipt; the amount paid is never changed
+function fillFromReceipt(it) {
+  it.hist = historyOf(it.cat); it.est = '';
+  if (/^fuel$/i.test(it.cat)) {
+    const a = it.amount;
+    if (it.litres && a != null) it.ppl = it.pplRead && Math.abs(it.litres * it.pplRead - a) <= 0.03 ? it.pplRead : round3(a / it.litres);
+    else if (!it.litres && it.pplRead && a != null) { it.litres = round2(a / it.pplRead); it.ppl = it.pplRead; it.est = 'calc'; }
+    else if (!it.litres && a != null && it.hist) { it.ppl = it.hist.rate; it.litres = round2(a / it.hist.rate); it.est = 'history'; }
+    else it.ppl = it.pplRead || null;
+  } else if (it.amount != null) {
+    if (!it.qtySet) { let q = it.qtyRead || 0;
+      if (!q && it.hist) { const k = Math.round(it.amount / it.hist.rate); if (k >= 1 && Math.abs(k * it.hist.rate - it.amount) <= Math.max(0.05, it.amount * 0.02)) q = k; }
+      it.qty = q || 1; }
+    it.unit = it.hist ? it.hist.unit : '';
+  }
+}
+function rowFromReceipt(it, id, fuelNo) {
+  const a = round2(it.amount);
+  if (/^fuel$/i.test(it.cat) && it.litres > 0) {
+    const q = trimNum(it.litres, 2), rate = it.ppl ? trimNum(it.ppl, 3) : trimNum(a / it.litres, 3);
+    const row = { desc: 'Fuel (' + roman(fuelNo) + ')', qty: q, unit: 'L', rate, receiptId: id };
+    if (Math.abs(round2(num(q) * num(rate)) - a) > 0.009) row.fixedAmount = a; return row;
+  }
+  if (/^fuel$/i.test(it.cat)) return { desc: 'Fuel (' + roman(fuelNo) + ')', qty: '', unit: '', rate: '', fixedAmount: a, receiptId: id };
+  if (/^uber$/i.test(it.cat) || !(it.qty > 0)) return { desc: it.cat, qty: '', unit: '', rate: '', fixedAmount: a, receiptId: id };
+  const each = it.hist && Math.abs(it.qty * it.hist.rate - a) <= 0.009 ? it.hist.rate : round2(a / it.qty);
+  const row = { desc: it.cat, qty: String(it.qty), unit: it.unit || '', rate: trimNum(each, 2), receiptId: id };
+  if (Math.abs(round2(it.qty * each) - a) > 0.009) row.fixedAmount = a; return row;
+}
+
 // review list shown in the editor while screenshots are read
 let rcpt = { items: [] };
+function rcptNote(it) {
+  if (it.amount == null || !it.cat) return '';
+  if (/^fuel$/i.test(it.cat)) {
+    if (!it.litres) return '<p class="hint rnote">No litres found. Type them in, or leave blank to show just the amount.</p>';
+    const line = trimNum(it.litres, 2) + ' L × $' + trimNum(it.ppl || it.amount / it.litres, 3) + '/L = ' + money(it.amount);
+    if (it.est === 'history') return '<p class="notice warn rnote">' + esc(line) + '. Litres were not on the photo, so they are worked out from your ' + (it.hist.avg ? 'average' : 'last') + ' fuel price on invoice ' + esc(it.hist.no) + ' ($' + esc(trimNum(it.hist.rate, 3)) + '/L). Check them against the docket.</p>';
+    if (it.est === 'calc') return '<p class="hint rnote">' + esc(line) + ' (litres worked out from the price per litre on the docket).</p>';
+    return '<p class="hint rnote">' + esc(line) + '</p>';
+  }
+  if (/^uber$/i.test(it.cat) || it.cat === '__new') return '';
+  const each = it.amount / (it.qty || 1);
+  return '<p class="hint rnote">' + esc((it.qty || 1) + ' × ' + money(each) + ' = ' + money(it.amount)) + (it.hist ? esc(' (last time ' + money(it.hist.rate) + ' each on invoice ' + it.hist.no + ')') : '') + '</p>';
+}
 function renderReceiptBox() {
   const box = $('rcptBox'); if (!box) return;
   if (!rcpt.items.length) { box.innerHTML = ''; return; }
@@ -1630,13 +1729,21 @@ function renderReceiptBox() {
      '<div class="rcptf"><label class="f">Shop<input type="text" data-k="' + k + '" data-f="merchant" value="' + esc(it.merchant) + '"></label>' +
      '<label class="f">Date<input type="date" data-k="' + k + '" data-f="date" value="' + esc(it.date) + '"></label>' +
      '<label class="f">Amount ($)<input type="text" inputmode="decimal" class="num" data-k="' + k + '" data-f="amount" value="' + (it.amount == null ? '' : esc(it.amount.toFixed(2))) + '"></label>' +
+     (/^fuel$/i.test(it.cat) ? '<label class="f">Litres<input type="text" inputmode="decimal" class="num" data-k="' + k + '" data-f="litres" value="' + (it.litres ? esc(trimNum(it.litres, 2)) : '') + '" placeholder="from the docket"></label>' : '') +
+     (it.cat && !/^(fuel|uber|__new)$/i.test(it.cat) ? '<label class="f">How many' + (it.unit ? ' (' + esc(it.unit) + ')' : '') + '<input type="text" inputmode="numeric" class="num" data-k="' + k + '" data-f="qty" value="' + esc(it.qty || 1) + '"></label>' : '') +
+     rcptNote(it) +
      '<label class="f">Goes on the invoice as<select data-k="' + k + '" data-f="cat"><option value="">Choose…</option>' + opts.map(o => '<option' + (o === it.cat ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '<option value="__new"' + (it.cat && !opts.includes(it.cat) ? ' selected' : '') + '>Something else…</option></select></label>' +
      (it.cat === '__new' || (it.cat && !opts.includes(it.cat)) ? '<label class="f">Name for it<input type="text" data-k="' + k + '" data-f="catName" value="' + esc(it.cat === '__new' ? '' : it.cat) + '" placeholder="e.g. Albums"></label>' : '') +
      (it.amount == null ? '<p class="status bad">Could not find the amount. Type it in.</p>' : '') + '</div>') +
     '<button class="iconbtn" type="button" data-rm="' + k + '" aria-label="Remove this screenshot">×</button></div>').join('') + '</div>' +
     '<div class="actions"><button class="primary" type="button" id="rcptAdd"' + (ready.length && ready.every(i => i.amount != null && i.cat && i.cat !== '__new') ? '' : ' disabled') + '>Add ' + ready.length + ' receipt' + (ready.length === 1 ? '' : 's') + ' to the invoice</button><button class="secondary" type="button" id="rcptCancel">Cancel</button></div>';
   box.querySelectorAll('[data-f]').forEach(el => el.addEventListener('change', () => { const it = rcpt.items[+el.dataset.k]; const f = el.dataset.f;
-    if (f === 'amount') it.amount = el.value.trim() === '' ? null : round2(num(el.value)); else if (f === 'catName') it.cat = el.value.trim() || '__new'; else it[f] = el.value; renderReceiptBox(); }));
+    if (f === 'amount') it.amount = el.value.trim() === '' ? null : round2(num(el.value)); else if (f === 'catName') it.cat = el.value.trim() || '__new';
+    else if (f === 'litres') { it.litres = el.value.trim() === '' ? null : Math.round(num(el.value) * 100) / 100 || null; it.est = ''; }
+    else if (f === 'cat') { it.cat = el.value; it.qtySet = false; if (/^fuel$/i.test(it.cat) && it.litres == null && it.text) { const ff = parseFuel(it.text, it.amount); it.litres = ff.litres; it.pplRead = ff.ppl; } }
+    else if (f === 'qty') { it.qty = Math.max(1, Math.round(num(el.value)) || 1); it.qtySet = true; } else it[f] = el.value;
+    if (f === 'amount' && /^fuel$/i.test(it.cat) && it.est) it.litres = null; // estimate again from the new amount
+    fillFromReceipt(it); renderReceiptBox(); }));
   box.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => { rcpt.items.splice(+b.dataset.rm, 1); renderReceiptBox(); }));
   if ($('rcptCancel')) $('rcptCancel').addEventListener('click', () => { rcpt.items = []; renderReceiptBox(); });
   if ($('rcptAdd')) $('rcptAdd').addEventListener('click', addReceiptsToDraft);
@@ -1648,7 +1755,10 @@ async function readReceiptFiles(files) {
   renderReceiptBox();
   for (let k = start; k < rcpt.items.length; k++) {
     const it = rcpt.items[k];
-    try { const r = parseReceiptText(await ocr(it.img.data)); Object.assign(it, { merchant: r.merchant, date: r.date, amount: r.amount, cat: guessCategory(r.merchant) }); }
+    try { const r = parseReceiptText(await ocr(it.img.data)); Object.assign(it, { merchant: r.merchant, date: r.date, amount: r.amount, cat: guessCategory(r.merchant), qtyRead: r.qtyRead, text: r.text });
+      const f = parseFuel(r.text, r.amount); if (!it.cat && (f.litres || f.ppl)) it.cat = 'Fuel';
+      if (/^fuel$/i.test(it.cat)) Object.assign(it, { litres: f.litres, pplRead: f.ppl, amount: f.amount != null ? f.amount : it.amount });
+      fillFromReceipt(it); }
     catch (e) { it.note = 'unread'; }
     it.state = 'ready'; renderReceiptBox();
   }
@@ -1664,7 +1774,7 @@ async function addReceiptsToDraft() {
     await putReceipt({ id, img: it.img.data, w: it.img.w, h: it.img.h, amount: it.amount, date: it.date, merchant: it.merchant, cat: it.cat, createdAt: new Date().toISOString() });
     if (it.merchant) settings.merchants[shopKey(it.merchant)] = it.cat;
     const isF = /^fuel$/i.test(it.cat);
-    const row = { desc: isF ? 'Fuel (' + roman(draft.rows.filter(isFuel).length + 1) + ')' : it.cat, qty: '', unit: '', rate: '', fixedAmount: it.amount, receiptId: id };
+    const row = rowFromReceipt(it, id, draft.rows.filter(isFuel).length + 1);
     if (isF) draft.rows.push(row); else { const fa = draft.rows.findIndex(isFuel); if (fa >= 0) draft.rows.splice(fa, 0, row); else draft.rows.push(row); }
   }
   saveSettings();
@@ -2714,8 +2824,88 @@ async function pwKey(pw, salt) {
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 310000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
 }
-async function makeShareLink(inv, pw, days) {
+/* ---------- receipt photos for share links ----------
+   The photos are too big to fit inside the link, so each one is encrypted on this device with a random key
+   and stored in the shared area of the database (shares/<random id>). The key travels inside the
+   password-locked link, so the stored copies are unreadable without the link AND its password.
+   They stop opening when the link expires. */
+const b64ToBytes = s => { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+function fitJpeg(dataUrl, maxSide, maxLen) {
+  return new Promise(res => { const im = new Image(); im.onload = () => { let side = maxSide, q = 0.72, out;
+      for (let k = 0; k < 6; k++) { const s = Math.min(1, side / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height); out = { data: c.toDataURL('image/jpeg', q), w: c.width, h: c.height };
+        if (out.data.length <= maxLen) break; side *= 0.8; q = Math.max(0.5, q - 0.06); }
+      res(out); }; im.onerror = () => res(null); im.src = dataUrl; });
+}
+async function uploadShareFiles(inv, days, onStep) {
+  const rows = (inv.rows || []).filter(r => r.receiptId); if (!rows.length) return { none: true };
+  if (mode !== 'cloud' || !cloud.user || !window.SKFB) return { skipped: rows.length };
+  const F = window.SKFB; const owner = cloud.user.uid;
+  const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt']);
+  const fk = b64u.enc(new Uint8Array(await crypto.subtle.exportKey('raw', key)));
+  const sid = 's' + b64u.enc(crypto.getRandomValues(new Uint8Array(15)));
+  const exp = new Date(Date.now() + (days ? days : 365) * 864e5 + 3600e3);
+  await F.setDoc(F.doc(cloud.fs, 'shares', sid), { owner, exp, n: rows.length, at: new Date() });
+  const files = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i]; if (onStep) onStep(i + 1, rows.length);
+    const rec = await getReceipt(r.receiptId); if (!rec) continue;
+    const img = await fitJpeg(rec.img, 1600, 700000); if (!img) continue;
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, b64ToBytes(img.data.split(',')[1])));
+    const fid = 'f' + i; await F.setDoc(F.doc(cloud.fs, 'shares', sid, 'files', fid), { owner, exp, iv: b64u.enc(iv), c: b64u.enc(ct) });
+    files.push({ f: fid, rid: S(r.receiptId, 30), desc: S(r.desc, 60), amount: amountOf(r), merchant: S(rec.merchant, 80), date: rec.date || '', w: img.w, h: img.h });
+  }
+  return files.length ? { sh: sid, fk, files } : { skipped: rows.length };
+}
+// in the share viewer: fetch and unlock the photos
+async function loadShareFiles(rc, onEach) {
+  await loadLib('fb', 'SKFB'); const F = window.SKFB;
+  let app; try { app = F.initializeApp(FIREBASE_CONFIG, 'bkshare'); } catch (e) { app = F.initializeApp(FIREBASE_CONFIG, 'bkshare' + Date.now()); }
+  const fs = F.initializeFirestore(app, {});
+  const key = await crypto.subtle.importKey('raw', b64u.dec(rc.fk), { name: 'AES-GCM' }, false, ['decrypt']);
+  const out = [];
+  await Promise.all((rc.files || []).slice(0, 50).map(async (f, i) => {
+    try { if (!/^s[A-Za-z0-9_-]{10,30}$/.test(rc.sh) || !/^f\d{1,2}$/.test(f.f)) throw new Error('bad');
+      const d = await F.getDoc(F.doc(fs, 'shares', rc.sh, 'files', f.f)); if (!d.exists()) throw new Error('gone');
+      const v = d.data(); const plain = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64u.dec(v.iv) }, key, b64u.dec(v.c)));
+      let bin = ''; for (let k = 0; k < plain.length; k += 0x8000) bin += String.fromCharCode.apply(null, plain.subarray(k, k + 0x8000));
+      const img = 'data:image/jpeg;base64,' + btoa(bin); if (!cleanReceipt({ img })) throw new Error('bad image');
+      out[i] = Object.assign({}, f, { img, desc: S(f.desc, 60), merchant: S(f.merchant, 80), date: ISO_D.test(f.date || '') ? f.date : '', amount: N(f.amount) });
+      receiptMem.set(S(f.rid, 30), { id: S(f.rid, 30), img, w: N(f.w) || 1, h: N(f.h) || 1, amount: N(f.amount), date: out[i].date, merchant: out[i].merchant, cat: '' });
+    } catch (e) { out[i] = { failed: true, desc: S(f.desc, 60) }; }
+    if (onEach) onEach(out);
+  }));
+  return out;
+}
+// full-screen photo viewer: swipe or arrow keys between photos, tap outside or Esc to close
+function openGallery(items, start) {
+  const list = items.filter(x => x && x.img); if (!list.length) return; let i = Math.max(0, Math.min(list.length - 1, start || 0));
+  const ov = document.createElement('div'); ov.className = 'gal'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Receipt photos');
+  ov.innerHTML = '<div class="galtop"><span class="galcount" id="galCount"></span><button type="button" class="galx" id="galX" aria-label="Close">×</button></div>' +
+    '<div class="galstage" id="galStage"><img id="galImg" alt=""></div>' +
+    '<button type="button" class="galnav prev" id="galPrev" aria-label="Previous photo">‹</button><button type="button" class="galnav next" id="galNext" aria-label="Next photo">›</button>' +
+    '<div class="galcap" id="galCap"></div>';
+  document.body.appendChild(ov); document.body.classList.add('noscroll');
+  const show = () => { const it = list[i]; ov.querySelector('#galImg').src = it.img; ov.querySelector('#galImg').alt = 'Receipt ' + (i + 1) + ': ' + (it.desc || '');
+    ov.querySelector('#galCount').textContent = (i + 1) + ' / ' + list.length;
+    ov.querySelector('#galCap').innerHTML = '<b>' + esc(it.desc || 'Receipt') + (it.amount != null ? ' · ' + esc(money(it.amount)) : '') + '</b><span>' + esc([it.merchant, it.date ? fmtDate(it.date) : ''].filter(Boolean).join(' · ')) + '</span>';
+    ov.querySelector('#galPrev').hidden = list.length < 2; ov.querySelector('#galNext').hidden = list.length < 2; };
+  const go = d => { i = (i + d + list.length) % list.length; show(); };
+  const close = () => { ov.remove(); document.body.classList.remove('noscroll'); document.removeEventListener('keydown', key); };
+  const key = e => { if (e.key === 'Escape') close(); else if (e.key === 'ArrowLeft') go(-1); else if (e.key === 'ArrowRight') go(1); };
+  document.addEventListener('keydown', key);
+  ov.querySelector('#galX').addEventListener('click', close); ov.querySelector('#galPrev').addEventListener('click', () => go(-1)); ov.querySelector('#galNext').addEventListener('click', () => go(1));
+  ov.querySelector('#galStage').addEventListener('click', e => { if (e.target.id === 'galStage') close(); });
+  let sx = null, sy = 0; const st = ov.querySelector('#galStage');
+  st.addEventListener('touchstart', e => { if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; } else sx = null; }, { passive: true });
+  st.addEventListener('touchend', e => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1); });
+  show(); ov.querySelector('#galX').focus();
+}
+
+async function makeShareLink(inv, pw, days, rc) {
   const payload = { v: 1, inv: cleanInvoice(inv), name: S(profile.name, 80), tfn: S(profile.tfn, 20), made: new Date().toISOString(), exp: days ? Date.now() + days * 864e5 : 0 };
+  if (rc && rc.sh) payload.rc = rc;
   delete payload.inv.editing;
   delete payload.inv.note; delete payload.inv.importedFrom;
   let data = new TextEncoder().encode(JSON.stringify(payload)); let flag = 2;
@@ -2748,8 +2938,20 @@ function renderShareViewer() {
       const inv = p.inv; const t = totalsOf(inv);
       box.innerHTML = '<div class="sharedoc"><div class="pagehead"><div><h1>Tax invoice ' + esc(inv.no) + '</h1><p>From ' + esc(p.name || 'the sender') + ' · ' + esc(fmtDate(inv.date)) + ' · ' + esc(aud(t.all)) + '</p></div>' +
         '<div class="actions"><button class="primary" type="button" id="shDl">Download PDF</button></div></div><p class="status" id="status" role="status"></p>' +
-        '<div class="paperbox"><div class="paper">' + paperSVG(inv) + '</div></div></div>';
-      $('shDl').addEventListener('click', async () => { const r = await downloadPdf(inv); say(r.msg, r.ok ? 'ok' : 'bad'); });
+        '<div class="paperbox"><div class="paper">' + paperSVG(inv) + '</div></div>' +
+        (p.rc && p.rc.sh ? '<section class="card galcard" id="galCard"><h2>Receipts (' + p.rc.files.length + ')</h2><p class="hint">Photos of the payments on this invoice. Tap one to see it full size.</p><div class="galgrid" id="galGrid">' +
+          p.rc.files.map((f, i) => '<button type="button" class="galthumb loading" data-g="' + i + '" disabled><span class="galph"></span><em>' + esc(S(f.desc, 60)) + ' · ' + esc(money(N(f.amount) || 0)) + '</em></button>').join('') + '</div></section>' : '') + '</div>';
+      let gal = []; let galP = Promise.resolve();
+      if (p.rc && p.rc.sh) {
+        if (p.rc.files.length) $('shDl').insertAdjacentHTML('beforebegin', '<button class="secondary" type="button" id="shGal">View receipts (' + p.rc.files.length + ')</button>');
+        const draw = list => { gal = list; document.querySelectorAll('#galGrid [data-g]').forEach(b => { const it = list[+b.dataset.g]; if (!it) return; b.classList.remove('loading');
+          if (it.failed) { b.innerHTML = '<span class="galph bad">Photo unavailable</span><em>' + esc(it.desc || '') + '</em>'; return; }
+          if (!b.querySelector('img')) { b.disabled = false; b.querySelector('.galph').outerHTML = '<img alt="" src="' + it.img + '">'; } }); };
+        galP = loadShareFiles(p.rc, draw).then(list => { draw(list); if (!list.some(x => x && x.img)) say('The receipt photos could not be loaded. The link may have expired.', 'bad'); }).catch(() => say('The receipt photos could not be loaded right now. Check the internet connection and open the link again.', 'bad'));
+        $('galGrid').addEventListener('click', e => { const b = e.target.closest('[data-g]'); if (!b || b.disabled) return; const ok = gal.filter(x => x && x.img); openGallery(ok, ok.indexOf(gal[+b.dataset.g])); });
+        if ($('shGal')) $('shGal').addEventListener('click', async () => { $('shGal').disabled = true; await galP; $('shGal').disabled = false; openGallery(gal, 0); });
+      }
+      $('shDl').addEventListener('click', async () => { $('shDl').disabled = true; await galP; const r = await downloadPdf(inv); $('shDl').disabled = false; say(r.msg, r.ok ? 'ok' : 'bad'); });
     } catch (err) {
       $('pwGo').disabled = false; $('pwMsg').className = 'status bad';
       $('pwMsg').textContent = (err && err.name === 'OperationError') ? 'That password is not right. Check it and try again.' : 'This link could not be opened. It may have been cut short when it was copied.';
@@ -2762,14 +2964,20 @@ function wireSharePanel(inv) {
     const saved = store.get('sharePw', '');
     box.innerHTML = '<div class="sharepanel"><p>Make a link your boss can open in any browser. They will need the password to see the invoice and download the PDF.</p>' +
       '<div class="pwrow"><label class="f" for="shPw">Password for this link<input id="shPw" type="text" autocomplete="off" value="' + esc(saved) + '" placeholder="Choose a password"></label><label class="f" for="shDays" style="flex:0 1 150px">Link works for<select id="shDays" class="sel"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option><option value="0">No expiry</option></select></label><button class="primary" type="button" id="shMake">Create link</button></div>' +
-      '<div id="shOut"></div><p class="hint">The invoice is locked inside the link itself. It is not uploaded anywhere. Send the password separately from the link (for example, tell them once in person or by text).</p></div>';
+      '<div id="shOut"></div><p class="hint">The invoice is locked inside the link itself. Receipt photos are locked with the same password and kept in your account until the link expires. Send the password separately from the link (for example, tell them once in person or by text).</p></div>';
     $('shMake').addEventListener('click', async () => {
       const pw = $('shPw').value; if (pw.length < 8) { $('shOut').innerHTML = '<p class="status bad">Use a password of at least 8 characters.</p>'; return; }
       store.set('sharePw', pw); $('shMake').disabled = true;
       try {
-        const link = await makeShareLink(inv, pw, Number($('shDays').value));
+        const days = Number($('shDays').value); let rc = null;
+        if ((inv.rows || []).some(r => r.receiptId)) { $('shOut').innerHTML = '<p class="status">Locking the receipt photos…</p>';
+          try { rc = await uploadShareFiles(inv, days, (k, n) => { $('shOut').innerHTML = '<p class="status">Locking receipt photo ' + k + ' of ' + n + '…</p>'; }); } catch (e) { rc = { failed: true }; } }
+        const link = await makeShareLink(inv, pw, days, rc && rc.sh ? rc : null);
         $('shOut').innerHTML = '<div class="linkrow"><input id="shLink" type="text" readonly value="' + esc(link) + '" aria-label="Share link"><button class="secondary" type="button" id="shCopy">Copy link</button>' +
-          (navigator.share && !window.claude ? '<button class="secondary" type="button" id="shSend">Send…</button>' : '') + '</div><p class="status" id="shMsg" role="status"></p>';
+          (navigator.share && !window.claude ? '<button class="secondary" type="button" id="shSend">Send…</button>' : '') + '</div><p class="status" id="shMsg" role="status"></p>' +
+          (rc && rc.sh ? '<p class="status ok">' + rc.files.length + ' receipt photo' + (rc.files.length === 1 ? '' : 's') + ' included. Your boss will see them as a gallery under the invoice.</p>'
+            : rc && rc.skipped ? '<p class="notice warn">The receipt photos are not in this link: sign in on the Account page first, then make the link again. (The downloaded PDF still has them.)</p>'
+            : rc && rc.failed ? '<p class="notice warn">The receipt photos could not be added (no internet?). The invoice itself is in the link. Try again to include the photos.</p>' : '');
         $('shLink').addEventListener('focus', e => e.target.select());
         $('shCopy').addEventListener('click', () => {
           const done = ok => { $('shMsg').className = 'status ' + (ok ? 'ok' : ''); $('shMsg').textContent = ok ? 'Link copied. Paste it into your message.' : 'Select the link above and copy it.'; if (!ok) $('shLink').select(); };
