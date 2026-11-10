@@ -61,7 +61,7 @@ for (const u of users.docs) {
       const doc = { title: n.title, body: n.body, kind: n.kind, view: n.view || '', at: Date.now(), read: false };
       await ref.collection('notifications').doc(n.key.replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 140)).set(doc);
       for (const sub of pushSnap.docs) {
-        try { await webpush.sendNotification({ endpoint: sub.data().endpoint, keys: sub.data().keys }, JSON.stringify({ title: n.title, body: n.body, view: n.view || '', tag: n.kind }), { TTL: n.kind === 'event' ? 1800 : 6 * 3600, urgency: n.kind === 'event' || n.kind === 'test' ? 'high' : 'normal' }); sentCount++; }
+        try { await webpush.sendNotification({ endpoint: sub.data().endpoint, keys: sub.data().keys }, JSON.stringify({ title: n.title, body: n.body, view: n.view || '', tag: n.kind, kind: n.kind }), { TTL: n.kind === 'event' ? 1800 : 6 * 3600, urgency: n.kind === 'event' || n.kind === 'test' ? 'high' : 'normal' }); sentCount++; }
         catch (e) { if (e.statusCode === 404 || e.statusCode === 410) await sub.ref.delete(); else console.log('push failed', e.statusCode || e.message); }
       }
     }

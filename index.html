@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Jmm+ncChpFX2X2M+A8+ljBVgKCA52U2zmCTOSNcrljY=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-jAnD1zPtTlbh2iUzO93mqFeISrwY/x1s9ukPlgrmCsY=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -184,6 +184,8 @@ button[disabled] { opacity: .5; cursor: not-allowed; }
 .rcpt { display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); }
 .rcpt img { width: 90px; border-radius: 6px; border: 1px solid var(--line); }
 .rcptf { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.wchip .tag.now { background: var(--accent); color: #fff; padding: 1px 7px; border-radius: 999px; }
+.dayblock { scroll-margin-top: 16px; } .dayblock.today > h3 .dname { color: var(--accent); }
 .rcptf .rnote { grid-column: 1 / -1; margin: 0; }
 .rcptf select, .rcptf input { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; width: 100%; }
 #rcptBox .actions { margin-top: 12px; }
@@ -674,7 +676,7 @@ async function migrateLocal() {
 /* ---------- routing ---------- */
 let route = { name: 'dash' };
 let draft = null;           // the invoice open in the editor
-function go(r) { route = r; if (window.innerWidth < 900) $('side').classList.add('collapsed'), $('listToggle').setAttribute('aria-expanded', 'false'), $('listToggle').textContent = 'Show'; render(); window.scrollTo(0, 0); }
+function go(r) { if (r.name === 'runsheet' && route.name !== 'runsheet') { rs.y = null; rs.data = null; rs.jump = true; } route = r; if (window.innerWidth < 900) $('side').classList.add('collapsed'), $('listToggle').setAttribute('aria-expanded', 'false'), $('listToggle').textContent = 'Show'; render(); window.scrollTo(0, 0); }
 $('navDash').addEventListener('click', () => go({ name: 'dash' }));
 $('navImport').addEventListener('click', () => go({ name: 'import' }));
 $('navRun').addEventListener('click', () => go({ name: 'runsheet' }));
@@ -1264,7 +1266,8 @@ function weekSummary(jobs) {
 /* run sheet page */
 let rs = { y: null, m: null, week: null, data: null, loading: false };
 function renderRunSheet() {
-  if (rs.y == null) { const ws = invoiceWeekStart(todayISO()); rs.week = ws; const d = dateOf(ws); rs.y = d.getFullYear(); rs.m = d.getMonth(); }
+  // open on the current week of the current month, scrolled to today
+  if (rs.y == null) { const t = todayISO(); rs.week = mondayOf(t); const d = dateOf(t); rs.y = d.getFullYear(); rs.m = d.getMonth(); rs.jump = true; }
   const key = rs.y + '-' + String(rs.m + 1).padStart(2, '0');
   const data = rs.data && rs.data.key === key ? rs.data : null;
   const jobs = data ? data.jobs || [] : [];
@@ -1281,7 +1284,7 @@ function renderRunSheet() {
     (canReachGoogle && sheetIdOf(sheetCfg.link) ? '<button class="secondary" type="button" id="rsRefresh">' + (rs.loading ? 'Loading…' : 'Refresh') + '</button>' : '') + '</div></div>' +
     (prob ? '<p class="notice warn">' + esc(prob) + '</p>' : '') +
     '<div class="weekchips"><button type="button" class="wchip" data-w=""' + (!rs.week || !weeks.includes(rs.week) ? ' aria-pressed="true"' : '') + '>Whole month</button>' +
-      weeks.map(w => '<button type="button" class="wchip" data-w="' + w + '"' + (rs.week === w ? ' aria-pressed="true"' : '') + '>' + esc(weekLabel(w).replace(/ \d{4}$/, '')) + (w === invWs ? ' <span class="tag">This Thursday\'s invoice</span>' : '') + '</button>').join('') + '</div>' +
+      weeks.map(w => '<button type="button" class="wchip" data-w="' + w + '"' + (rs.week === w ? ' aria-pressed="true"' : '') + '>' + esc(weekLabel(w).replace(/ \d{4}$/, '')) + (w === mondayOf(todayISO()) ? ' <span class="tag now">This week</span>' : '') + (w === invWs ? ' <span class="tag">This Thursday\'s invoice</span>' : '') + '</button>').join('') + '</div>' +
     '<div class="tiles small"><div class="tile"><span class="k">Jobs</span><span class="v">' + sum.count + '</span><span class="sub">' + esc(rs.week && weeks.includes(rs.week) ? weekLabel(rs.week) : MONTH_FULL[rs.m]) + '</span></div>' +
       '<div class="tile"><span class="k">Days with jobs</span><span class="v">' + Object.keys(byDay).length + '</span><span class="sub">' + esc(sum.days || '—') + '</span></div>' +
       '<div class="tile"><span class="k">Attendant hours</span><span class="v">' + fmtNum(sum.attHours) + ' hrs</span><span class="sub">' + sum.att.length + ' job' + (sum.att.length === 1 ? '' : 's') + ' with an attendant</span></div>' +
@@ -1303,6 +1306,9 @@ function renderRunSheet() {
   if ($('rsSave')) $('rsSave').addEventListener('click', () => { const v = $('rsLink').value.trim(); if (v && !sheetIdOf(v)) { say('That does not look like a Google Sheets link.', 'bad'); return; } sheetCfg.link = v; store.set('sheet', { link: v }); saveSettings(); rs.msg = { text: v ? 'Link saved. Checking the sheet…' : 'Link removed.', kind: 'ok' }; fetchRs(true).then(() => { if (!v || !rs.data) return; const pr = sheetProblem([rs.data]); rs.msg = pr ? { text: pr, kind: 'bad' } : { text: 'Connected: found ' + (rs.data.jobs || []).length + ' jobs in ' + (rs.data.src || 'the sheet').replace('Google Sheet, ', '') + '.', kind: 'ok' }; if (route.name === 'runsheet') renderRunSheet(); }); });
   $('rsFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) uploadSheet(f); });
   if (!data && !rs.loading) fetchRs(false);
+  // after opening the page: bring today (or the next day with jobs) into view, once the jobs are in
+  if (rs.jump && data) { rs.jump = false; const t = todayISO(); const day = Object.keys(byDay).sort().find(d => d >= t);
+    if (day && day !== Object.keys(byDay).sort()[0]) setTimeout(() => { const el = document.querySelector('.dayblock[data-day="' + day + '"]'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80); }
   if (data && rs.week && weeks.includes(rs.week)) ensureHours(shown.slice(0, 15), () => { if (route.name === 'runsheet') renderRunSheet(); });
 }
 
@@ -1347,7 +1353,7 @@ function jobCard(j) {
 }
 function dayBlock(day, list) {
   const d = dateOf(day); const isToday = day === todayISO();
-  return '<section class="dayblock"><h3><span class="dname">' + (isToday ? 'Today · ' : '') + DAYNAME[d.getDay()] + '</span> ' + d.getDate() + ' ' + MONTH_FULL[d.getMonth()] + '<span class="dcount">' + list.length + ' job' + (list.length === 1 ? '' : 's') + '</span></h3>' +
+  return '<section class="dayblock' + (isToday ? ' today' : '') + '" data-day="' + day + '"><h3><span class="dname">' + (isToday ? 'Today · ' : '') + DAYNAME[d.getDay()] + '</span> ' + d.getDate() + ' ' + MONTH_FULL[d.getMonth()] + '<span class="dcount">' + list.length + ' job' + (list.length === 1 ? '' : 's') + '</span></h3>' +
     '<div class="jobs">' + list.slice().sort((a, b) => ((boothRange(a.booth) || {}).start || 0) - ((boothRange(b.booth) || {}).start || 0)).map(jobCard).join('') + '</div></section>';
 }
 async function fetchRs(force) {
@@ -2760,6 +2766,47 @@ function wireIconChoice() { document.querySelectorAll('input[name="appIcon"]').f
 const VAPID_PUBLIC = 'BL4N88QauaPsao5-d21dYEzxsA1ZJ_Tk-8j8R6XrFJeEqLfQb2qHCJWft4BPxa4Mk9KI7GF6rOyYQY7HG8IreJE';
 const NDEF = { tomorrow: { on: true, at: 1140 }, confirm: { on: true }, sheet: { on: true }, invoice: { on: true, day: 3, at: 1080 }, event: { on: true, lead: 60 }, quiet: { from: 1320, to: 420 } };
 const nprefs = () => { const p = settings.notify || {}; const o = JSON.parse(JSON.stringify(NDEF)); Object.keys(o).forEach(k => { if (p[k] && typeof p[k] === 'object') Object.assign(o[k], p[k]); }); return o; };
+/* ---------- notification sounds (while Boothkeepr is open) ----------
+   Reminders that arrive with the app closed use the phone's / Mac's own notification sound.
+   While the app is open, a new reminder plays one of these, made on the fly (no sound files). */
+const SOUNDS = { chime: 'Chime', shutter: 'Camera shutter', pop: 'Pop', bell: 'Bell', off: 'No sound' };
+const soundPref = () => { const s = store.get('sound', 'chime'); return SOUNDS[s] ? s : 'chime'; };
+let actx = null;
+function audio() { try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) { actx = null; } return actx; }
+// browsers only allow sound after the person has touched the page once
+['pointerdown', 'keydown', 'touchend'].forEach(ev => document.addEventListener(ev, () => { audio(); }, { once: true, passive: true }));
+function tone(c, t, freq, dur, vol, type, glideTo) {
+  const o = c.createOscillator(), g = c.createGain(); o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t); if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
+}
+function noiseBurst(c, t, dur, vol, hp) {
+  const b = c.createBuffer(1, Math.ceil(c.sampleRate * dur), c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+  const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = b; f.type = 'highpass'; f.frequency.value = hp || 1800; g.gain.value = vol;
+  s.connect(f).connect(g).connect(c.destination); s.start(t);
+}
+function playSound(name, urgent) {
+  name = name || soundPref(); if (name === 'off') return false; const c = audio(); if (!c || c.state !== 'running') return false;
+  const t = c.currentTime + 0.02;
+  const once = (t0) => {
+    if (name === 'chime') { tone(c, t0, 880, 0.35, 0.18); tone(c, t0 + 0.13, 1318.5, 0.55, 0.16); }
+    else if (name === 'shutter') { noiseBurst(c, t0, 0.05, 0.5, 2500); noiseBurst(c, t0 + 0.085, 0.07, 0.4, 1500); tone(c, t0 + 0.2, 1567.98, 0.25, 0.08); }
+    else if (name === 'pop') { tone(c, t0, 420, 0.12, 0.25, 'sine', 900); tone(c, t0 + 0.14, 620, 0.14, 0.18, 'sine', 1300); }
+    else if (name === 'bell') { [1, 2.76, 5.4].forEach((m, i) => tone(c, t0, 523.25 * m, 1.2 / (i + 1), 0.14 / (i + 1))); }
+  };
+  once(t); if (urgent) once(t + 0.7);
+  if (navigator.vibrate) try { navigator.vibrate(urgent ? [120, 80, 120, 80, 200] : [90]); } catch (e) {}
+  return true;
+}
+// called with each new batch of reminders from the account; plays once for anything new since the app opened
+const heardNotifs = new Set(); let notifsPrimed = false;
+function soundForNew(list) {
+  const fresh = list.filter(n => !n.read && !heardNotifs.has(n.id) && Date.now() - n.at < 30 * 60 * 1000);
+  list.forEach(n => heardNotifs.add(n.id));
+  if (!notifsPrimed) { notifsPrimed = true; return; } // the first load is history, not news
+  if (fresh.length && document.visibilityState === 'visible') playSound(null, fresh.some(n => n.kind === 'event'));
+}
+
 let notifs = [], notifUnsub = null;
 const markedRead = new Set();
 const unreadCount = () => notifs.filter(n => !n.read && !markedRead.has(n.id)).length;
@@ -2769,7 +2816,7 @@ function watchNotifs() {
   const F = window.SKFB;
   notifUnsub = F.onSnapshot(F.query(cloud.col('notifications'), F.orderBy('at', 'desc'), F.limit(40)), snap => {
     notifs = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).map(n => ({ id: S(n.id, 160), title: S(n.title, 80), body: S(n.body, 400), view: S(n.view, 20), kind: S(n.kind, 20), at: +n.at || 0, read: n.read === true }));
-    renderSide(); if (route.name === 'notify') renderNotify();
+    soundForNew(notifs); renderSide(); if (route.name === 'notify') renderNotify();
   }, () => {});
 }
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -2813,6 +2860,9 @@ async function renderNotify() {
       '<div class="nrow"><span></span><div><b>Quiet hours</b><p>No reminders in this time, except event-day countdowns.</p><div class="inlrow"><label class="f inl">From<input type="time" id="nQf" value="' + t2(pr.quiet.from) + '"></label><label class="f inl">To<input type="time" id="nQt" value="' + t2(pr.quiet.to) + '"></label></div></div></div>' +
     '</div><div class="actions" style="margin-top:12px"><button class="primary" type="button" id="nSave">Save</button></div><p class="status" id="nSaveMsg" role="status"></p>' +
     '<p class="hint">Reminders are checked every 10 minutes, so one can arrive a few minutes after the time you set.</p></section>' +
+    '<section class="card"><h2>Sound</h2><div class="inlrow"><label class="f inl">When Boothkeepr is open<select id="nSnd" class="sel">' + Object.keys(SOUNDS).map(k => '<option value="' + k + '"' + (k === soundPref() ? ' selected' : '') + '>' + SOUNDS[k] + '</option>').join('') + '</select></label><button class="secondary" type="button" id="nSndPlay">Play</button></div>' +
+    '<p class="hint">Event-day countdowns play it twice. This is set for this device only.</p>' +
+    '<p class="hint">When Boothkeepr is closed, reminders use ' + (isAppleMobile() ? 'your iPhone’s notification sound. To change or turn it on: Settings → Notifications → Boothkeepr → Sounds.' : /Mac/.test(navigator.platform || navigator.userAgent) ? 'your Mac’s notification sound. To turn it on: System Settings → Notifications → your browser (or Boothkeepr) → “Play sound for notifications”.' : 'this device’s notification sound, set in its notification settings.') + '</p></section>' +
     '<section class="card"><h2>Recent</h2>' + (notifs.length ? '<ul class="nlist">' + notifs.map(n => '<li class="' + (n.read ? '' : 'unread') + '"><button type="button" data-nv="' + esc(n.view) + '" data-nid="' + esc(n.id) + '"><span class="ntitle">' + esc(n.title) + '</span><span class="nbody">' + esc(n.body) + '</span><span class="nat">' + esc(ago(n.at)) + '</span></button></li>').join('') + '</ul>' : '<p class="empty">' + (signed ? 'Nothing yet. Reminders you get will also be listed here.' : 'Sign in to see your reminders here.') + '</p>') + '</section>';
   if ($('nSign')) $('nSign').addEventListener('click', () => go({ name: 'account' }));
   if ($('nOn')) $('nOn').addEventListener('click', async () => { $('nOn').disabled = true; try { const r = await turnOnPush(); nstate.msg = { text: r.msg, kind: r.ok ? 'ok' : 'bad' }; nstate.sub = await currentSub(); } catch (e) { nstate.msg = { text: 'Could not turn on notifications (' + (e.message || e) + ').', kind: 'bad' }; } renderNotify(); });
@@ -2820,6 +2870,8 @@ async function renderNotify() {
   if ($('nTestSrv')) $('nTestSrv').addEventListener('click', () => { settings.notify = Object.assign({}, nprefs(), settings.notify || {}, { testAt: Date.now() }); saveSettings();
     nstate.msg = { text: 'Test requested. The reminder service checks every 10 minutes, so it should arrive on every device you turned on within about 10 minutes, even with Boothkeepr closed. Lock your phone and wait for it.', kind: 'ok' }; renderNotify(); });
   if ($('nTest')) $('nTest').addEventListener('click', async () => { const reg = await navigator.serviceWorker.ready; reg.showNotification('Boothkeepr test', { body: 'Notifications are working on this device.', icon: 'icon-192.png', badge: 'icon-192.png', tag: 'test' }); });
+  $('nSnd').addEventListener('change', () => { store.set('sound', $('nSnd').value); playSound($('nSnd').value); });
+  $('nSndPlay').addEventListener('click', () => { audio(); setTimeout(() => { if (!playSound($('nSnd').value) && $('nSnd').value !== 'off') { $('nSaveMsg').className = 'status bad'; $('nSaveMsg').textContent = 'This browser blocked the sound. Check the device is not on silent.'; } }, 60); });
   $('nSave').addEventListener('click', () => {
     const tm = id => parseClock($(id).value) ?? 0;
     settings.notify = { tomorrow: { on: $('nTom').checked, at: tm('nTomAt') }, confirm: { on: $('nConf').checked }, sheet: { on: $('nSheet').checked }, invoice: { on: $('nInv').checked, day: +$('nInvDay').value, at: tm('nInvAt') }, event: { on: $('nEv').checked, lead: Math.min(240, Math.max(10, parseInt($('nLead').value, 10) || 60)) }, quiet: { from: tm('nQf'), to: tm('nQt') }, ...((settings.notify || {}).testAt ? { testAt: settings.notify.testAt } : {}) };
