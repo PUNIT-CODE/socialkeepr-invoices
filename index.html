@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ptSfSle3b0GvpUdc1KYP9koBQIPJdtnYQX0dFpAOD4k=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Fq6C0LDdfXmHbSTzALqsecqhgLvEkipGdHCsiJcok58=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -422,6 +422,7 @@ body.noscroll { overflow: hidden; }
 .viewseg { align-self: flex-start; }
 .btnlink { display: inline-flex; align-items: center; text-decoration: none; }
 a.primary.btnlink { font-weight: 600; background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 12px 18px; }
+.calsteps { margin: 0 0 12px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 .calhow ol { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
 .draftcard { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-left: 4px solid var(--accent); }
 .draftcard h2 { margin-bottom: 4px; }
@@ -648,7 +649,7 @@ function cleanSettings(d) {
   if (np) { const b = v => v !== false; const t = (v, x) => num(v, 0, DAY - 1, x);
     notify = { tomorrow: { on: b((np.tomorrow || {}).on), at: t((np.tomorrow || {}).at, 1140) }, confirm: { on: b((np.confirm || {}).on) }, sheet: { on: b((np.sheet || {}).on) }, invoice: { on: b((np.invoice || {}).on), day: num((np.invoice || {}).day, 0, 6, 4), at: t((np.invoice || {}).at, 480) }, event: { on: b((np.event || {}).on), lead: num((np.event || {}).lead, 10, 240, 60) }, quiet: { from: t((np.quiet || {}).from, 1320), to: t((np.quiet || {}).to, 420) } }; if (typeof np.testAt === 'number' && isFinite(np.testAt) && np.testAt > 0) notify.testAt = Math.floor(np.testAt); }
   const cs = d && d.calendar && typeof d.calendar === 'object' ? d.calendar : null;
-  const calendar = cs ? { on: cs.on === true, email: /^[^@\s]{1,100}@[^@\s]{1,100}\.[^@\s]{1,40}$/.test(S(cs.email, 200)) ? S(cs.email, 200) : '', syncAt: typeof cs.syncAt === 'number' && isFinite(cs.syncAt) ? Math.floor(cs.syncAt) : 0 } : null;
+  const calendar = cs ? { on: cs.on === true, kind: cs.kind === 'google' ? 'google' : 'icloud', email: /^[^@\s]{1,100}@[^@\s]{1,100}\.[^@\s]{1,40}$/.test(S(cs.email, 200)) ? S(cs.email, 200) : '', syncAt: typeof cs.syncAt === 'number' && isFinite(cs.syncAt) ? Math.floor(cs.syncAt) : 0 } : null;
   return { merchants: m, sheetLink: S(d && d.sheetLink, 300), templates: tp, route, venueHours: vh, ...(notify ? { notify } : {}), ...(calendar ? { calendar } : {}), routeEngine: d && d.routeEngine === 'free' ? 'free' : 'auto', mapsKey: /^[A-Za-z0-9_-]{0,60}$/.test(S(d && d.mapsKey, 60)) ? S(d && d.mapsKey, 60) : '' };
 }
 function tooBig(f, max = LIMITS.uploadBytes) { return !f || f.size > max; }
@@ -1417,38 +1418,64 @@ function calCardHTML() { return mode === 'cloud' && cloud.user ? '<section class
 async function wireCalCard(force) {
   const box = $('calInner'); if (!box) return;
   const c = settings.calendar || {}; const d = await loadCalDoc(force); if (!$('calInner')) return;
-  const email = c.email || (cloud.user && cloud.user.email) || '';
-  const waiting = c.on && (!d || !d.id || (c.syncAt && (d.at || 0) < c.syncAt)) && !(d && d.error && (d.at || 0) >= (c.syncAt || 0));
+  const kind = c.kind === 'google' ? 'google' : 'icloud';
   const when = t => t ? new Date(t).toLocaleString('en-AU', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+  const fresh = d && (d.at || 0) >= (c.syncAt || 0);
+  const appleForm = (why) => (why ? '<p class="notice warn">' + why + '</p>' : '') +
+    '<ol class="calsteps"><li>On your iPhone or Mac open <a href="https://account.apple.com" target="_blank" rel="noopener">account.apple.com</a> and sign in.</li>' +
+    '<li>Go to <b>Sign-In and Security</b> → <b>App-Specific Passwords</b> → <b>+</b>, name it <b>Boothkeepr</b> and copy the password it shows (like <code>abcd-efgh-ijkl-mnop</code>).</li>' +
+    '<li>Paste it below with your Apple Account email.</li></ol>' +
+    '<div class="fields"><label class="f">Apple Account email<input id="calApple" type="email" inputmode="email" autocomplete="username" value="' + esc((d && d.appleId) || (cloud.user && cloud.user.email) || '') + '" placeholder="you@icloud.com"></label>' +
+    '<label class="f">App-specific password<input id="calPw" type="password" autocomplete="off" spellcheck="false" placeholder="abcd-efgh-ijkl-mnop" maxlength="24"></label></div>' +
+    '<p class="hint">The password is locked away: the app can save it but never show it again, and only the reminder service uses it, just for the Boothkeepr jobs calendar. You can cancel it any time on account.apple.com.</p>' +
+    '<div class="actions" style="margin-top:10px"><button class="primary" type="button" id="calApOn">Put my jobs in Apple Calendar</button>' + (c.on ? '<button class="linkish" type="button" id="calOff">Turn off</button>' : '<button class="linkish" type="button" id="calUseG">Use Google Calendar instead</button>') + '</div>';
   let h = '';
-  if (!c.on) {
-    h = '<p class="hint" style="margin-top:0">Put every job from the run sheet into a <b>Boothkeepr jobs</b> calendar in your Google account. It updates by itself when the run sheet changes, and shows on your iPhone and Mac.</p>' +
-      '<label class="f">Your Google (Gmail) address<input id="calEmail" type="email" inputmode="email" autocomplete="email" value="' + esc(email) + '" placeholder="you@gmail.com"></label>' +
-      '<div class="actions" style="margin-top:10px"><button class="primary" type="button" id="calOn">Put my jobs in my calendar</button></div>';
-  } else if (d && d.error === 'api-off') {
-    h = '<p class="notice warn">One-time step to finish: turn on Google Calendar for Boothkeepr. Open the link, make sure you are signed in with the Google account that owns Firebase, and press <b>Enable</b>. Then press “Check again”.</p>' +
-      '<div class="actions"><a class="primary btnlink" href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com?project=' + encodeURIComponent(GC_PROJECT) + '" target="_blank" rel="noopener">Turn on Google Calendar</a><button class="secondary" type="button" id="calNow">Check again</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
-  } else if (waiting) {
-    h = '<p class="syncline"><i class="dot unpaid"></i>Setting up for ' + esc(c.email) + '…</p><p class="hint">The calendar is made and filled within about 10 minutes. You will get an email from Google Calendar saying it was shared with you.</p>' +
-      '<div class="actions"><button class="secondary" type="button" id="calRefresh">Refresh</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
-  } else if (d && d.error) {
-    h = '<p class="notice warn">The calendar could not be updated last time (' + esc(d.error) + ', ' + esc(when(d.at)) + '). It will try again by itself.</p><div class="actions"><button class="secondary" type="button" id="calNow">Try again now</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
-  } else if (d && d.id) {
-    const cid = btoa(d.id).replace(/=+$/, '');
-    h = '<p class="syncline"><i class="dot paid"></i>' + esc(d.count || 0) + ' job' + (d.count === 1 ? '' : 's') + ' in your <b>Boothkeepr jobs</b> calendar · shared with ' + esc(d.email || c.email) + ' · checked ' + esc(when(d.at)) + '</p>' +
-      '<div class="actions"><a class="primary btnlink" href="https://calendar.google.com/calendar/r?cid=' + encodeURIComponent(cid) + '" target="_blank" rel="noopener">Open in Google Calendar</a><button class="secondary" type="button" id="calNow">Update now</button><button class="linkish" type="button" id="calOff">Turn off</button></div>' +
-      '<details class="jmore calhow"><summary>Show it on iPhone and Mac</summary><ol>' +
-        '<li><b>Add it to Google Calendar once:</b> press “Open in Google Calendar” above and choose <b>Add</b> (or use the link in the email from Google).</li>' +
-        '<li><b>iPhone:</b> Settings → Apps → Calendar → Calendar Accounts → Add Account → Google, sign in with ' + esc(d.email || c.email) + ' and turn on Calendars. Then open <a href="https://calendar.google.com/calendar/syncselect" target="_blank" rel="noopener">calendar.google.com/calendar/syncselect</a> on the phone, tick <b>Boothkeepr jobs</b> and press Save.</li>' +
-        '<li><b>Mac:</b> Calendar → Settings → Accounts → + → Google, sign in. If Boothkeepr jobs does not show, tick it under the account’s <b>Delegation</b> tab.</li>' +
-        '<li>Alerts: in the Calendar app, tap Boothkeepr jobs → “i” to choose its colour and default alerts.</li></ol></details>';
-  } else h = '<p class="hint">Setting up…</p><div class="actions"><button class="linkish" type="button" id="calOff">Turn off</button></div>';
+  if (!c.on) h = '<p class="hint" style="margin-top:0">Put every job from the run sheet into a <b>Boothkeepr jobs</b> calendar on your iPhone and Mac. It updates by itself when the run sheet changes, within about 10 minutes.</p>' + (kind === 'google' ? googleCalForm(c) : appleForm(''));
+  else if (kind === 'icloud' && ui.calForm === 'apple-pw') h = appleForm('');
+  else if (kind === 'icloud') {
+    if (!fresh) h = '<p class="syncline"><i class="dot unpaid"></i>Connecting to iCloud…</p><p class="hint">The calendar is made and filled within about 10 minutes.</p><div class="actions"><button class="secondary" type="button" id="calRefresh">Refresh</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
+    else if (d.error === 'icloud-auth' || d.error === 'icloud-nocreds') h = appleForm(d.error === 'icloud-auth' ? 'Apple did not accept that email and app-specific password. Make a new app-specific password and enter it again.' : 'Enter your app-specific password again to reconnect.');
+    else if (d.error === 'icloud-nocal') h = '<p class="notice warn">iCloud would not let Boothkeepr make the calendar. In the Calendar app on your Mac or iPhone, make a new iCloud calendar named exactly <b>Boothkeepr jobs</b>, then press Try again.</p><div class="actions"><button class="secondary" type="button" id="calNow">Try again</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
+    else if (d.error) h = '<p class="notice warn">The calendar could not be updated last time (' + esc(when(d.at)) + '). It tries again by itself every 10 minutes.</p><div class="actions"><button class="secondary" type="button" id="calNow">Try again now</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
+    else h = '<p class="syncline"><i class="dot paid"></i>' + esc(d.count || 0) + ' job' + (d.count === 1 ? '' : 's') + ' in your <b>Boothkeepr jobs</b> calendar (iCloud) · checked ' + esc(when(d.at)) + '</p>' +
+      '<p class="hint">It is already in Calendar on every Apple device signed in to ' + esc(d.appleId || '') + '. In the Calendar app tap <b>Calendars</b> to show or hide it, or tap the ⓘ next to it to pick its colour and alerts.</p>' +
+      '<div class="actions"><button class="secondary" type="button" id="calNow">Update now</button><button class="secondary" type="button" id="calNewPw">Change password</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
+  } else h = googleCalStatus(c, d, when);
   box.innerHTML = h + '<p class="status" id="calMsg" role="status"></p>';
-  const save = (on, mail) => { settings.calendar = { on, email: mail, syncAt: Date.now() }; saveSettings(); calDocAt = 0; };
-  if ($('calOn')) $('calOn').addEventListener('click', () => { const m = $('calEmail').value.trim(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)) { $('calMsg').className = 'status bad'; $('calMsg').textContent = 'Type the email address of your Google account.'; return; } save(true, m); wireCalCard(); });
-  if ($('calOff')) $('calOff').addEventListener('click', async () => { if (!(await confirmBox('Take your jobs out of your calendar?', 'The Boothkeepr jobs calendar is deleted within about 10 minutes. Your run sheet is not touched.', 'Turn off', 'Keep it'))) return; save(false, c.email || ''); wireCalCard(); });
-  if ($('calNow')) $('calNow').addEventListener('click', () => { save(true, c.email); $('calMsg').className = 'status ok'; $('calMsg').textContent = 'Asked for an update. It happens within about 10 minutes.'; });
-  if ($('calRefresh')) $('calRefresh').addEventListener('click', () => wireCalCard(true));
+  const msg = (t, k) => { $('calMsg').className = 'status ' + (k || ''); $('calMsg').textContent = t; };
+  const save = (on, extra) => { settings.calendar = Object.assign({}, settings.calendar || {}, extra || {}, { on, syncAt: Date.now() }); saveSettings(); calDocAt = 0; };
+  if ($('calApOn')) $('calApOn').addEventListener('click', async () => {
+    const id = $('calApple').value.trim(), pw = $('calPw').value.trim().toLowerCase().replace(/\s+/g, '');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(id)) { msg('Type the email of your Apple Account.', 'bad'); return; }
+    if (!/^[a-z]{4}-?[a-z]{4}-?[a-z]{4}-?[a-z]{4}$/.test(pw)) { msg('That does not look like an app-specific password. It is 16 letters like abcd-efgh-ijkl-mnop (not your normal Apple password).', 'bad'); return; }
+    const fixed = pw.replace(/-/g, '').match(/.{4}/g).join('-');
+    $('calApOn').disabled = true;
+    try { await window.SKFB.setDoc(cloud.ref('private', 'icloud'), { appleId: id, appPassword: fixed, at: new Date().toISOString() }); save(true, { kind: 'icloud' }); ui.calForm = ''; calDoc = null; wireCalCard(); }
+    catch (e) { $('calApOn').disabled = false; msg('Could not save it (' + (e.code || 'error') + '). Check the internet and try again.', 'bad'); }
+  });
+  if ($('calUseG')) $('calUseG').addEventListener('click', () => { ui.calForm = 'google'; settings.calendar = Object.assign({}, c, { kind: 'google' }); wireCalCard(); });
+  if ($('calUseA')) $('calUseA').addEventListener('click', () => { ui.calForm = ''; settings.calendar = Object.assign({}, c, { kind: 'icloud' }); wireCalCard(); });
+  if ($('calOn')) $('calOn').addEventListener('click', () => { const m = $('calEmail').value.trim(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)) { msg('Type the email address of your Google account.', 'bad'); return; } save(true, { kind: 'google', email: m }); wireCalCard(); });
+  if ($('calNewPw')) $('calNewPw').addEventListener('click', () => { ui.calForm = 'apple-pw'; wireCalCard(); });
+  {
+    if ($('calOff')) $('calOff').onclick = async () => { if (!(await confirmBox('Take your jobs out of your calendar?', 'Boothkeepr removes the jobs it added within about 10 minutes, then forgets the password. Your run sheet is not touched.', 'Turn off', 'Keep it'))) return; save(false); wireCalCard(); };
+    if ($('calNow')) $('calNow').onclick = () => { save(true); msg('Asked for an update. It happens within about 10 minutes.', 'ok'); };
+    if ($('calRefresh')) $('calRefresh').onclick = () => wireCalCard(true);
+  }
+}
+const ui = { calForm: '' };
+function googleCalForm(c) {
+  return '<p class="hint">Google Calendar: the jobs go into a calendar shared with your Google account.</p><label class="f">Your Google (Gmail) address<input id="calEmail" type="email" inputmode="email" autocomplete="email" value="' + esc(c.email || (cloud.user && cloud.user.email) || '') + '" placeholder="you@gmail.com"></label>' +
+    '<div class="actions" style="margin-top:10px"><button class="primary" type="button" id="calOn">Put my jobs in Google Calendar</button><button class="linkish" type="button" id="calUseA">Use Apple Calendar instead</button></div>';
+}
+function googleCalStatus(c, d, when) {
+  const waiting = !d || !d.id || (c.syncAt && (d.at || 0) < c.syncAt);
+  if (d && d.error === 'api-off' && (d.at || 0) >= (c.syncAt || 0)) return '<p class="notice warn">One-time step to finish: turn on Google Calendar for Boothkeepr. Open the link, sign in with the Google account that owns Firebase, and press <b>Enable</b>. Then press “Check again”.</p>' +
+    '<div class="actions"><a class="primary btnlink" href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com?project=' + encodeURIComponent(GC_PROJECT) + '" target="_blank" rel="noopener">Turn on Google Calendar</a><button class="secondary" type="button" id="calNow">Check again</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
+  if (waiting) return '<p class="syncline"><i class="dot unpaid"></i>Setting up for ' + esc(c.email || '') + '…</p><p class="hint">Ready within about 10 minutes. You will get an email from Google Calendar saying it was shared with you.</p><div class="actions"><button class="secondary" type="button" id="calRefresh">Refresh</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
+  if (d.error) return '<p class="notice warn">The calendar could not be updated last time (' + esc(when(d.at)) + '). It tries again by itself.</p><div class="actions"><button class="secondary" type="button" id="calNow">Try again now</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
+  const cid = btoa(d.id).replace(/=+$/, '');
+  return '<p class="syncline"><i class="dot paid"></i>' + esc(d.count || 0) + ' jobs in your <b>Boothkeepr jobs</b> Google calendar · checked ' + esc(when(d.at)) + '</p><div class="actions"><a class="primary btnlink" href="https://calendar.google.com/calendar/r?cid=' + encodeURIComponent(cid) + '" target="_blank" rel="noopener">Open in Google Calendar</a><button class="secondary" type="button" id="calNow">Update now</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
 }
 
 function sheetCell(j, k, first, d) {

@@ -5,6 +5,7 @@ import admin from 'firebase-admin';
 import webpush from 'web-push';
 import { melbNow, due, csvRows, jobsFromGrid, tabNames, addDays } from './logic.mjs';
 import { syncCalendar } from './calendar.mjs';
+import { syncICloud } from './icloud.mjs';
 
 const VAPID_PUBLIC = 'BL4N88QauaPsao5-d21dYEzxsA1ZJ_Tk-8j8R6XrFJeEqLfQb2qHCJWft4BPxa4Mk9KI7GF6rOyYQY7HG8IreJE';
 const sa = process.env.FIREBASE_SERVICE_ACCOUNT, vpriv = process.env.VAPID_PRIVATE_KEY;
@@ -72,8 +73,15 @@ for (const u of users.docs) {
     const cal = settings.calendar;
     if (cal && typeof cal === 'object') {
       const calRef = ref.collection('private').doc('calendar'); const cs = await calRef.get(); const cd = cs.exists ? cs.data() : null;
-      if (cal.on || (cd && cd.id)) { const r = await syncCalendar({ sa: SA, cfg: cal, doc: cd, jobs, today: now.iso, force: typeof cal.syncAt === 'number' && cal.syncAt > ((cd && cd.at) || 0) });
-        if (r) { await calRef.set(r); calCount++; if (r.error) console.log('calendar:', r.error); } }
+      const force = typeof cal.syncAt === 'number' && cal.syncAt > ((cd && cd.at) || 0);
+      const credRef = ref.collection('private').doc('icloud'); const cr = await credRef.get();
+      if (cal.kind === 'icloud' || (cd && cd.kind === 'icloud') || cr.exists) {
+        // Apple Calendar (iCloud); if a Google calendar was made before, take it away first
+        if (cd && cd.id && cd.kind !== 'icloud') await syncCalendar({ sa: SA, cfg: { on: false }, doc: cd, jobs, today: now.iso });
+        const r = await syncICloud({ cfg: cal, creds: cr.exists ? cr.data() : null, doc: cd, jobs, today: now.iso, force });
+        if (r) { await calRef.set(r.result); calCount++; if (r.wipe && cr.exists) await credRef.delete(); if (r.result.error) console.log('calendar:', r.result.error); }
+      } else if (cal.on || (cd && cd.id)) { const r = await syncCalendar({ sa: SA, cfg: cal, doc: cd, jobs, today: now.iso, force });
+        if (r) { await calRef.set(Object.assign({ kind: 'google' }, r)); calCount++; if (r.error) console.log('calendar:', r.error); } }
     }
     // tidy: keep in-app notifications for 30 days
     const old = await ref.collection('notifications').where('at', '<', Date.now() - 30 * 864e5).limit(50).get(); for (const d of old.docs) await d.ref.delete();
