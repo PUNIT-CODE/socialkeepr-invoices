@@ -71,13 +71,14 @@ const FP = ['booth', 'setup', 'pickup', 'address', 'venue', 'phone', 'staffNote'
 const FP_NAMES = { booth: 'booth time', setup: 'set-up time', pickup: 'pick-up', address: 'address', venue: 'venue', phone: 'phone', staffNote: 'attendant', event: 'event', style: 'booth type', backdrop: 'backdrop' };
 const fp = j => FP.map(f => S(j[f], 200)).join('¦');
 
-export const DEFAULT_PREFS = { tomorrow: { on: true, at: 19 * 60 }, confirm: { on: true }, sheet: { on: true }, invoice: { on: true, day: 3, at: 18 * 60 }, event: { on: true, lead: 60 }, quiet: { from: 22 * 60, to: 7 * 60 } };
+export const DEFAULT_PREFS = { tomorrow: { on: true, at: 19 * 60 }, confirm: { on: true }, sheet: { on: true }, invoice: { on: true, day: 4, at: 8 * 60 }, event: { on: true, lead: 60 }, quiet: { from: 22 * 60, to: 7 * 60 } };
 export function mergePrefs(p) {
   const o = JSON.parse(JSON.stringify(DEFAULT_PREFS)); if (!p || typeof p !== 'object') return o;
   const n = (v, a, b, d) => { v = +v; return isFinite(v) ? Math.min(b, Math.max(a, Math.round(v))) : d; };
   for (const k of Object.keys(o)) if (p[k] && typeof p[k] === 'object') { if ('on' in o[k]) o[k].on = p[k].on !== false; }
   o.tomorrow.at = n(p.tomorrow && p.tomorrow.at, 0, DAY - 1, o.tomorrow.at);
   o.invoice.day = n(p.invoice && p.invoice.day, 0, 6, o.invoice.day); o.invoice.at = n(p.invoice && p.invoice.at, 0, DAY - 1, o.invoice.at);
+  if (o.invoice.day === 3 && o.invoice.at === 18 * 60) { o.invoice.day = 4; o.invoice.at = 8 * 60; } // the old default (Wed 6pm) moves to the Thursday draft
   o.event.lead = n(p.event && p.event.lead, 10, 240, o.event.lead);
   o.quiet.from = n(p.quiet && p.quiet.from, 0, DAY - 1, o.quiet.from); o.quiet.to = n(p.quiet && p.quiet.to, 0, DAY - 1, o.quiet.to);
   return o;
@@ -132,7 +133,7 @@ export function due(input) {
     const ws = invoiceWeekStart(today);
     if (!(input.invoices || []).some(i => i.weekStart === ws)) {
       const n = jobs.filter(j => j.date >= ws && j.date <= addDays(ws, 6)).length;
-      send('invoice-' + ws, 'invoice', 'Time to make your invoice', 'It’s ' + DAYNAME[dow(today)] + ': create the invoice for ' + weekLabel(ws) + (n ? ' (' + n + ' job' + (n === 1 ? '' : 's') + ' on the run sheet)' : '') + '.', 'edit');
+      send('invoice-' + ws, 'invoice', 'Your invoice is ready to check', 'Drafted from the run sheet for ' + weekLabel(ws) + (n ? ': ' + n + ' event' + (n === 1 ? '' : 's') : ': no jobs found') + '. Tap to review it, add receipts and send.', 'invdraft');
     }
   }
   // 5) event day countdowns (these ignore quiet hours)

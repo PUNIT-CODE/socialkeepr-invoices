@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-QzfCt2qWM3G90S+FH7MxWGaImQE/GAkXKQDaHSTnFzU=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ptSfSle3b0GvpUdc1KYP9koBQIPJdtnYQX0dFpAOD4k=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -420,6 +420,11 @@ body.noscroll { overflow: hidden; }
 
 /* run sheet: Cards / Sheet switch, and the spreadsheet view */
 .viewseg { align-self: flex-start; }
+.btnlink { display: inline-flex; align-items: center; text-decoration: none; }
+a.primary.btnlink { font-weight: 600; background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 12px 18px; }
+.calhow ol { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.draftcard { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-left: 4px solid var(--accent); }
+.draftcard h2 { margin-bottom: 4px; }
 .msgbtn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--accent); color: var(--accent); background: transparent; border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 14px; font-family: inherit; cursor: pointer; }
 .msgbtn:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .gsheet { --gl: color-mix(in srgb, var(--fg) 14%, transparent); --gh: color-mix(in srgb, var(--fg) 5%, var(--panel)); overflow: auto; max-height: 72vh; border: 1px solid var(--gl); border-radius: 8px; background: var(--panel); -webkit-overflow-scrolling: touch; }
@@ -641,8 +646,10 @@ function cleanSettings(d) {
   Object.keys(vsrc).slice(0, 300).forEach(k => { if (!/^[a-z |]{1,130}$/.test(k) || typeof vsrc[k] !== 'object' || !vsrc[k]) return; const o = {}; Object.keys(vsrc[k]).forEach(dw => { if (!/^[0-6]$/.test(dw) || !Array.isArray(vsrc[k][dw])) return; o[dw] = vsrc[k][dw].slice(0, 4).filter(x => Array.isArray(x) && x.length === 2).map(x => [num(x[0], 0, 2 * DAY, 0), num(x[1], 0, 2 * DAY, 0)]); }); vh[k] = o; });
   const np = d && d.notify && typeof d.notify === 'object' ? d.notify : null; let notify;
   if (np) { const b = v => v !== false; const t = (v, x) => num(v, 0, DAY - 1, x);
-    notify = { tomorrow: { on: b((np.tomorrow || {}).on), at: t((np.tomorrow || {}).at, 1140) }, confirm: { on: b((np.confirm || {}).on) }, sheet: { on: b((np.sheet || {}).on) }, invoice: { on: b((np.invoice || {}).on), day: num((np.invoice || {}).day, 0, 6, 3), at: t((np.invoice || {}).at, 1080) }, event: { on: b((np.event || {}).on), lead: num((np.event || {}).lead, 10, 240, 60) }, quiet: { from: t((np.quiet || {}).from, 1320), to: t((np.quiet || {}).to, 420) } }; if (typeof np.testAt === 'number' && isFinite(np.testAt) && np.testAt > 0) notify.testAt = Math.floor(np.testAt); }
-  return { merchants: m, sheetLink: S(d && d.sheetLink, 300), templates: tp, route, venueHours: vh, ...(notify ? { notify } : {}), routeEngine: d && d.routeEngine === 'free' ? 'free' : 'auto', mapsKey: /^[A-Za-z0-9_-]{0,60}$/.test(S(d && d.mapsKey, 60)) ? S(d && d.mapsKey, 60) : '' };
+    notify = { tomorrow: { on: b((np.tomorrow || {}).on), at: t((np.tomorrow || {}).at, 1140) }, confirm: { on: b((np.confirm || {}).on) }, sheet: { on: b((np.sheet || {}).on) }, invoice: { on: b((np.invoice || {}).on), day: num((np.invoice || {}).day, 0, 6, 4), at: t((np.invoice || {}).at, 480) }, event: { on: b((np.event || {}).on), lead: num((np.event || {}).lead, 10, 240, 60) }, quiet: { from: t((np.quiet || {}).from, 1320), to: t((np.quiet || {}).to, 420) } }; if (typeof np.testAt === 'number' && isFinite(np.testAt) && np.testAt > 0) notify.testAt = Math.floor(np.testAt); }
+  const cs = d && d.calendar && typeof d.calendar === 'object' ? d.calendar : null;
+  const calendar = cs ? { on: cs.on === true, email: /^[^@\s]{1,100}@[^@\s]{1,100}\.[^@\s]{1,40}$/.test(S(cs.email, 200)) ? S(cs.email, 200) : '', syncAt: typeof cs.syncAt === 'number' && isFinite(cs.syncAt) ? Math.floor(cs.syncAt) : 0 } : null;
+  return { merchants: m, sheetLink: S(d && d.sheetLink, 300), templates: tp, route, venueHours: vh, ...(notify ? { notify } : {}), ...(calendar ? { calendar } : {}), routeEngine: d && d.routeEngine === 'free' ? 'free' : 'auto', mapsKey: /^[A-Za-z0-9_-]{0,60}$/.test(S(d && d.mapsKey, 60)) ? S(d && d.mapsKey, 60) : '' };
 }
 function tooBig(f, max = LIMITS.uploadBytes) { return !f || f.size > max; }
 
@@ -721,6 +728,16 @@ $('navNotify').addEventListener('click', () => { nstate.checked = false; go({ na
 $('navRoute').addEventListener('click', () => go({ name: 'route' }));
 const weekOfInv = inv => inv.weekStart || invoiceWeekStart(inv.date);
 function invoiceForWeek(ws, exceptNo) { return sorted().find(i => weekOfInv(i) === ws && Number(i.no) !== Number(exceptNo)); }
+// Thursday draft: last week's invoice, filled from the run sheet, opened for checking
+let editBanner = '';
+async function draftWeekInvoice() {
+  const ws = invoiceWeekStart(todayISO()); const ex = invoiceForWeek(ws);
+  if (ex) { go({ name: 'inv', no: Number(ex.no) }); return; }
+  let jobs = []; try { const w = await jobsForWeek(ws, false); jobs = w.jobs || []; } catch (e) {}
+  draft = freshDraft(); draft.date = todayISO(); const sm = applyWeek(draft, ws, jobs); store.set('draft', draft);
+  editBanner = 'Drafted for you from the run sheet: ' + weekLabel(ws) + ', ' + sm.count + ' event' + (sm.count === 1 ? '' : 's') + (sm.attHours ? ', ' + fmtNum(sm.attHours) + ' attendant hours' : '') + '. Add fuel and other receipts, check the numbers, then press Save.';
+  go({ name: 'edit' });
+}
 function startNewInvoice() { draft = freshDraft(); store.set('draft', draft); go({ name: 'edit' }); }
 $('navNew').addEventListener('click', () => {
   const ws = invoiceWeekStart(todayISO()); const ex = invoiceForWeek(ws);
@@ -816,6 +833,9 @@ function dashHTML() {
   const recent = sorted().slice(0, 6);
   return '<div class="pagehead"><div><h1>Dashboard</h1><p>Everything you have invoiced, worked out from ' + (mode === 'cloud' ? 'the invoices in your account' : 'the invoices saved on this device') + '.</p></div>' +
     '<div class="actions"><button class="secondary" type="button" id="dashImport">Import old invoices</button><button class="primary" type="button" id="dashNew">+ New invoice</button></div></div>' +
+    (() => { const t = todayISO(), ws = invoiceWeekStart(t); const dw = dateOf(t).getDay();
+      if (invoiceForWeek(ws) || !(dw === 0 || dw >= 4)) return '';
+      return '<section class="card draftcard"><div><h2>Invoice for ' + esc(weekLabel(ws)) + '</h2><p class="hint" style="margin:0">Ready to be drafted from the run sheet. Check it, add receipts, then save and send.</p></div><button class="primary" type="button" id="dashDraft">Review invoice</button></section>'; })() +
     '<div class="tiles">' +
       tile('Total invoiced', money(s.total), s.count + ' invoice' + (s.count === 1 ? '' : 's') + ' all time', 'hero') +
       tile('Paid so far', money(s.paid), 'Money already received') +
@@ -864,6 +884,7 @@ function chartSVG(byMonth) {
 }
 function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))); const f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
 function wireDash() {
+  if ($('dashDraft')) $('dashDraft').addEventListener('click', () => draftWeekInvoice());
   if (flashDash) { const p = document.createElement('p'); p.className = 'notice'; p.textContent = flashDash; flashDash = null; $('view').insertBefore(p, $('view').children[1]); }
   const il = $('dashImport'); if (il) il.addEventListener('click', () => go({ name: 'import' }));
   document.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => go({ name: 'inv', no: +b.dataset.open })));
@@ -976,10 +997,12 @@ const PRESETS = {
   custom: () => ({ desc: '', qty: '', unit: '', rate: '' })
 };
 function renderEditor() {
+  if (route.name === 'edit' && editBanner && draft && draft.weekStart !== invoiceWeekStart(todayISO())) editBanner = '';
   if (!draft) draft = store.get('draft', null) || freshDraft();
   const editing = draft.editing != null;
   $('view').innerHTML =
     '<div class="pagehead"><div><h1>' + (editing ? 'Edit invoice ' + esc(draft.editing) : 'New invoice') + '</h1><p>Fill in the boxes. The preview updates as you type.</p></div></div>' +
+    (editBanner && !editing ? '<p class="notice ok draftnote">' + esc(editBanner) + '</p>' : '') +
     '<div class="editor"><div class="stack">' +
       '<section class="card"><h2>Invoice</h2><div class="fields">' +
         '<label class="f">Invoice number<input id="fNo" type="number" min="1" step="1" inputmode="numeric"></label>' +
@@ -1327,6 +1350,7 @@ function renderRunSheet() {
     '<div class="seg viewseg" role="group" aria-label="View"><button type="button" class="segbtn" data-view="cards" aria-pressed="' + (rsView() === 'cards') + '">Cards</button><button type="button" class="segbtn" data-view="sheet" aria-pressed="' + (rsView() === 'sheet') + '">Sheet</button></div>' +
     (rs.loading && !data ? '<p class="empty">Loading the run sheet…</p>' : !shown.length ? '<section class="card"><p class="empty">' + (data && !prob ? 'No jobs on the run sheet for this ' + (rs.week && weeks.includes(rs.week) ? 'week' : 'month') + '.' : 'Nothing to show yet.') + '</p></section>' :
       rsView() === 'sheet' ? sheetTable(byDay) : Object.keys(byDay).sort().map(day => dayBlock(day, byDay[day])).join('')) +
+    calCardHTML() +
     '<section class="card"><h2>Where the run sheet comes from</h2>' +
       (canReachGoogle ? '<div class="fields"><label class="f" style="grid-column:1/-1">Google Sheet link<input id="rsLink" type="url" placeholder="https://docs.google.com/spreadsheets/d/…" value="' + esc(sheetCfg.link) + '"></label></div>' +
         '<div class="actions" style="margin-top:10px"><button class="secondary" type="button" id="rsSave">Save link</button></div>' +
@@ -1337,6 +1361,7 @@ function renderRunSheet() {
   $('rsPrev').addEventListener('click', () => { const d = new Date(rs.y, rs.m - 1, 1); rs.y = d.getFullYear(); rs.m = d.getMonth(); rs.week = null; rs.data = null; renderRunSheet(); fetchRs(false); });
   $('rsNext').addEventListener('click', () => { const d = new Date(rs.y, rs.m + 1, 1); rs.y = d.getFullYear(); rs.m = d.getMonth(); rs.week = null; rs.data = null; renderRunSheet(); fetchRs(false); });
   if ($('rsRefresh')) $('rsRefresh').addEventListener('click', () => fetchRs(true));
+  wireCalCard();
   document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => { store.set('rsView', b.dataset.view); rs.jump = true; renderRunSheet(); }));
   const gs = $('gsheet'); if (gs) {
     const toggle = tr => { const k = tr.dataset.row; rs.openRow = rs.openRow === k ? null : k; const x = gs.scrollLeft, y = window.scrollY; renderRunSheet(); const g2 = $('gsheet'); if (g2) g2.scrollLeft = x; window.scrollTo(0, y); };
@@ -1380,6 +1405,52 @@ const SHEET_COLS = [
   ['Date', 'date'], ['Name', 'client'], ['Contact', 'phone'], ['Venue', 'venue'], ['Suburb / Address', 'addr'], ['Style', 'style'], ['Backdrop', 'backdrop'],
   ['Event', 'event'], ['Guest arrival', 'arrival'], ['Booth time', 'booth'], ['Earliest set up', 'setup'], ['Pick up', 'pickup'], ['Album, glue & pen', 'album'],
   ['Props', 'props'], ['Parking', 'parking'], ['Notes', 'notes'], ['Other contact', 'contact2'], ['', 'msg']];
+// ----- jobs in Google Calendar (the reminder service keeps it in step with the run sheet) -----
+let calDoc = null, calDocAt = 0;
+const GC_PROJECT = (FIREBASE_CONFIG && FIREBASE_CONFIG.projectId) || '';
+async function loadCalDoc(force) {
+  if (mode !== 'cloud' || !cloud.user) return null; if (!force && Date.now() - calDocAt < 20000) return calDoc;
+  try { const d = await window.SKFB.getDoc(cloud.ref('private', 'calendar')); calDoc = d.exists() ? d.data() : null; calDocAt = Date.now(); } catch (e) {}
+  return calDoc;
+}
+function calCardHTML() { return mode === 'cloud' && cloud.user ? '<section class="card" id="calCard"><h2>Jobs in your calendar</h2><div id="calInner"><p class="hint">Checking…</p></div></section>' : ''; }
+async function wireCalCard(force) {
+  const box = $('calInner'); if (!box) return;
+  const c = settings.calendar || {}; const d = await loadCalDoc(force); if (!$('calInner')) return;
+  const email = c.email || (cloud.user && cloud.user.email) || '';
+  const waiting = c.on && (!d || !d.id || (c.syncAt && (d.at || 0) < c.syncAt)) && !(d && d.error && (d.at || 0) >= (c.syncAt || 0));
+  const when = t => t ? new Date(t).toLocaleString('en-AU', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+  let h = '';
+  if (!c.on) {
+    h = '<p class="hint" style="margin-top:0">Put every job from the run sheet into a <b>Boothkeepr jobs</b> calendar in your Google account. It updates by itself when the run sheet changes, and shows on your iPhone and Mac.</p>' +
+      '<label class="f">Your Google (Gmail) address<input id="calEmail" type="email" inputmode="email" autocomplete="email" value="' + esc(email) + '" placeholder="you@gmail.com"></label>' +
+      '<div class="actions" style="margin-top:10px"><button class="primary" type="button" id="calOn">Put my jobs in my calendar</button></div>';
+  } else if (d && d.error === 'api-off') {
+    h = '<p class="notice warn">One-time step to finish: turn on Google Calendar for Boothkeepr. Open the link, make sure you are signed in with the Google account that owns Firebase, and press <b>Enable</b>. Then press “Check again”.</p>' +
+      '<div class="actions"><a class="primary btnlink" href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com?project=' + encodeURIComponent(GC_PROJECT) + '" target="_blank" rel="noopener">Turn on Google Calendar</a><button class="secondary" type="button" id="calNow">Check again</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
+  } else if (waiting) {
+    h = '<p class="syncline"><i class="dot unpaid"></i>Setting up for ' + esc(c.email) + '…</p><p class="hint">The calendar is made and filled within about 10 minutes. You will get an email from Google Calendar saying it was shared with you.</p>' +
+      '<div class="actions"><button class="secondary" type="button" id="calRefresh">Refresh</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
+  } else if (d && d.error) {
+    h = '<p class="notice warn">The calendar could not be updated last time (' + esc(d.error) + ', ' + esc(when(d.at)) + '). It will try again by itself.</p><div class="actions"><button class="secondary" type="button" id="calNow">Try again now</button><button class="linkish" type="button" id="calOff">Turn off</button></div>';
+  } else if (d && d.id) {
+    const cid = btoa(d.id).replace(/=+$/, '');
+    h = '<p class="syncline"><i class="dot paid"></i>' + esc(d.count || 0) + ' job' + (d.count === 1 ? '' : 's') + ' in your <b>Boothkeepr jobs</b> calendar · shared with ' + esc(d.email || c.email) + ' · checked ' + esc(when(d.at)) + '</p>' +
+      '<div class="actions"><a class="primary btnlink" href="https://calendar.google.com/calendar/r?cid=' + encodeURIComponent(cid) + '" target="_blank" rel="noopener">Open in Google Calendar</a><button class="secondary" type="button" id="calNow">Update now</button><button class="linkish" type="button" id="calOff">Turn off</button></div>' +
+      '<details class="jmore calhow"><summary>Show it on iPhone and Mac</summary><ol>' +
+        '<li><b>Add it to Google Calendar once:</b> press “Open in Google Calendar” above and choose <b>Add</b> (or use the link in the email from Google).</li>' +
+        '<li><b>iPhone:</b> Settings → Apps → Calendar → Calendar Accounts → Add Account → Google, sign in with ' + esc(d.email || c.email) + ' and turn on Calendars. Then open <a href="https://calendar.google.com/calendar/syncselect" target="_blank" rel="noopener">calendar.google.com/calendar/syncselect</a> on the phone, tick <b>Boothkeepr jobs</b> and press Save.</li>' +
+        '<li><b>Mac:</b> Calendar → Settings → Accounts → + → Google, sign in. If Boothkeepr jobs does not show, tick it under the account’s <b>Delegation</b> tab.</li>' +
+        '<li>Alerts: in the Calendar app, tap Boothkeepr jobs → “i” to choose its colour and default alerts.</li></ol></details>';
+  } else h = '<p class="hint">Setting up…</p><div class="actions"><button class="linkish" type="button" id="calOff">Turn off</button></div>';
+  box.innerHTML = h + '<p class="status" id="calMsg" role="status"></p>';
+  const save = (on, mail) => { settings.calendar = { on, email: mail, syncAt: Date.now() }; saveSettings(); calDocAt = 0; };
+  if ($('calOn')) $('calOn').addEventListener('click', () => { const m = $('calEmail').value.trim(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)) { $('calMsg').className = 'status bad'; $('calMsg').textContent = 'Type the email address of your Google account.'; return; } save(true, m); wireCalCard(); });
+  if ($('calOff')) $('calOff').addEventListener('click', async () => { if (!(await confirmBox('Take your jobs out of your calendar?', 'The Boothkeepr jobs calendar is deleted within about 10 minutes. Your run sheet is not touched.', 'Turn off', 'Keep it'))) return; save(false, c.email || ''); wireCalCard(); });
+  if ($('calNow')) $('calNow').addEventListener('click', () => { save(true, c.email); $('calMsg').className = 'status ok'; $('calMsg').textContent = 'Asked for an update. It happens within about 10 minutes.'; });
+  if ($('calRefresh')) $('calRefresh').addEventListener('click', () => wireCalCard(true));
+}
+
 function sheetCell(j, k, first, d) {
   const v = k === 'addr' ? (j.address || j.suburb || '') : String(j[k] || '').trim(); const warn = v && CHECK_RE.test(v) && k !== 'client' ? ' warn' : '';
   if (k === 'date') return '<th scope="row" class="c-date' + (first ? '' : ' cont') + '">' + (first ? '<b>' + DAYNAME[d.getDay()].slice(0, 3) + '</b> ' + d.getDate() + ' ' + MONTHS[d.getMonth()] : '') + '</th>';
@@ -1975,7 +2046,7 @@ const cloud = {
   delReceipt(id) { return window.SKFB.deleteDoc(window.SKFB.doc(this.col('receipts'), id)); },
   saveProfile(p) { return window.SKFB.setDoc(this.ref('private', 'profile'), { name: S(p.name, 80), tfn: S(p.tfn, 20) }); },
   saveMember(d) { d = Object.assign({}, d); if ('name' in d) d.name = S(d.name, 40); if ('phone' in d) d.phone = S(d.phone, 20); if ('photo' in d) d.photo = safePhoto(d.photo); return window.SKFB.updateDoc(window.SKFB.doc(this.fs, 'users', this.user.uid), Object.assign({ updatedAt: new Date().toISOString() }, d)); },
-  saveSettings() { return window.SKFB.setDoc(this.ref('private', 'settings'), cleanSettings({ merchants: settings.merchants, sheetLink: sheetCfg.link, templates: settings.templates, route: settings.route, mapsKey: settings.mapsKey, venueHours: settings.venueHours, routeEngine: settings.routeEngine, notify: settings.notify })).catch(() => {}); },
+  saveSettings() { return window.SKFB.setDoc(this.ref('private', 'settings'), cleanSettings({ merchants: settings.merchants, sheetLink: sheetCfg.link, templates: settings.templates, route: settings.route, mapsKey: settings.mapsKey, venueHours: settings.venueHours, routeEngine: settings.routeEngine, notify: settings.notify, calendar: settings.calendar })).catch(() => {}); },
   async signOutAll() {
     const F = window.SKFB;
     const saved = await Promise.race([F.waitForPendingWrites(this.fs).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), 6000))]);
@@ -2847,8 +2918,8 @@ function wireIconChoice() { document.querySelectorAll('input[name="appIcon"]').f
 
 /* ---------- notifications: reminders on this phone, sent by the Boothkeepr reminder service ---------- */
 const VAPID_PUBLIC = 'BL4N88QauaPsao5-d21dYEzxsA1ZJ_Tk-8j8R6XrFJeEqLfQb2qHCJWft4BPxa4Mk9KI7GF6rOyYQY7HG8IreJE';
-const NDEF = { tomorrow: { on: true, at: 1140 }, confirm: { on: true }, sheet: { on: true }, invoice: { on: true, day: 3, at: 1080 }, event: { on: true, lead: 60 }, quiet: { from: 1320, to: 420 } };
-const nprefs = () => { const p = settings.notify || {}; const o = JSON.parse(JSON.stringify(NDEF)); Object.keys(o).forEach(k => { if (p[k] && typeof p[k] === 'object') Object.assign(o[k], p[k]); }); return o; };
+const NDEF = { tomorrow: { on: true, at: 1140 }, confirm: { on: true }, sheet: { on: true }, invoice: { on: true, day: 4, at: 480 }, event: { on: true, lead: 60 }, quiet: { from: 1320, to: 420 } };
+const nprefs = () => { const p = settings.notify || {}; const o = JSON.parse(JSON.stringify(NDEF)); Object.keys(o).forEach(k => { if (p[k] && typeof p[k] === 'object') Object.assign(o[k], p[k]); }); if (o.invoice.day === 3 && o.invoice.at === 1080) { o.invoice.day = 4; o.invoice.at = 480; } return o; };
 /* ---------- notification sounds (while Boothkeepr is open) ----------
    Reminders that arrive with the app closed use the phone's / Mac's own notification sound.
    While the app is open, a new reminder plays one of these, made on the fly (no sound files). */
@@ -2938,7 +3009,7 @@ async function renderNotify() {
       row('nTom', pr.tomorrow.on, 'Tomorrow’s jobs', 'e.g. “2 jobs tomorrow: 6pm Karli – Abbotsford, 6:30pm Priya – Geelong”', '<label class="f inl">Send at<input type="time" id="nTomAt" value="' + t2(pr.tomorrow.at) + '"></label>') +
       row('nConf', pr.confirm.on, 'Things to confirm', 'Pick-up or set-up times the run sheet marks “please confirm” or “??” for the next two days. Sent with tomorrow’s jobs.') +
       row('nSheet', pr.sheet.on, 'Run sheet changes', 'New bookings, removed jobs, or changed times, addresses, booth or backdrop.') +
-      row('nInv', pr.invoice.on, 'Weekly invoice reminder', 'Skipped when that week’s invoice is already made.', '<div class="inlrow"><label class="f inl">Day<select id="nInvDay" class="sel">' + days.map((d, i) => '<option value="' + i + '"' + (i === pr.invoice.day ? ' selected' : '') + '>' + d + '</option>').join('') + '</select></label><label class="f inl">Time<input type="time" id="nInvAt" value="' + t2(pr.invoice.at) + '"></label></div>') +
+      row('nInv', pr.invoice.on, 'Thursday invoice draft', 'Drafts last week’s invoice from the run sheet and tells you it is ready to check. Skipped when that week’s invoice is already made.', '<div class="inlrow"><label class="f inl">Day<select id="nInvDay" class="sel">' + days.map((d, i) => '<option value="' + i + '"' + (i === pr.invoice.day ? ' selected' : '') + '>' + d + '</option>').join('') + '</select></label><label class="f inl">Time<input type="time" id="nInvAt" value="' + t2(pr.invoice.at) + '"></label></div>') +
       row('nEv', pr.event.on, 'Event-day countdown', 'e.g. “1 h until set-up must start at Moon Dog OG” and “Time to leave”. Uses your route plan for the day when there is one.', '<label class="f inl">Remind me this many minutes before<input type="number" id="nLead" min="10" max="240" step="5" value="' + pr.event.lead + '"></label>') +
       '<div class="nrow"><span></span><div><b>Quiet hours</b><p>No reminders in this time, except event-day countdowns.</p><div class="inlrow"><label class="f inl">From<input type="time" id="nQf" value="' + t2(pr.quiet.from) + '"></label><label class="f inl">To<input type="time" id="nQt" value="' + t2(pr.quiet.to) + '"></label></div></div></div>' +
     '</div><div class="actions" style="margin-top:12px"><button class="primary" type="button" id="nSave">Save</button></div><p class="status" id="nSaveMsg" role="status"></p>' +
@@ -2968,7 +3039,7 @@ async function renderNotify() {
 }
 // opened from a notification: ?go=route etc.
 (function openFromNotification() { const v = new URLSearchParams(location.search).get('go'); if (!v) return; history.replaceState(null, '', location.pathname);
-  setTimeout(() => { if (v === 'edit') $('navNew').click(); else if (['runsheet', 'route', 'messages', 'dash', 'notify'].includes(v)) go({ name: v }); }, 600); })();
+  setTimeout(() => { if (v === 'edit') $('navNew').click(); else if (v === 'invdraft') draftWeekInvoice(); else if (['runsheet', 'route', 'messages', 'dash', 'notify'].includes(v)) go({ name: v }); }, 600); })();
 
 /* ---------- sign-in page and Face ID / Touch ID lock ----------
    Signed out: the whole app is replaced by a sign-in page. Signed in with the lock on: the app stays hidden

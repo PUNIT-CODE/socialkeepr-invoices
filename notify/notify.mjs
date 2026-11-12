@@ -4,11 +4,13 @@
 import admin from 'firebase-admin';
 import webpush from 'web-push';
 import { melbNow, due, csvRows, jobsFromGrid, tabNames, addDays } from './logic.mjs';
+import { syncCalendar } from './calendar.mjs';
 
 const VAPID_PUBLIC = 'BL4N88QauaPsao5-d21dYEzxsA1ZJ_Tk-8j8R6XrFJeEqLfQb2qHCJWft4BPxa4Mk9KI7GF6rOyYQY7HG8IreJE';
 const sa = process.env.FIREBASE_SERVICE_ACCOUNT, vpriv = process.env.VAPID_PRIVATE_KEY;
 if (!sa || !vpriv) { console.log('Secrets not set yet (FIREBASE_SERVICE_ACCOUNT, VAPID_PRIVATE_KEY). Nothing sent.'); process.exit(0); }
-admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) });
+const SA = JSON.parse(sa);
+admin.initializeApp({ credential: admin.credential.cert(SA) });
 webpush.setVapidDetails('https://punit-code.github.io/socialkeepr-invoices/', VAPID_PUBLIC, vpriv);
 const db = admin.firestore();
 const now = melbNow(process.env.FAKE_NOW ? new Date(process.env.FAKE_NOW) : new Date());
@@ -36,7 +38,7 @@ async function sheetJobs(link) {
   sheetCache.set(id, all); return all;
 }
 
-let sentCount = 0, people = 0;
+let sentCount = 0, people = 0, calCount = 0;
 const users = await db.collection('users').get();
 for (const u of users.docs) {
   const uid = u.id; const ref = db.collection('users').doc(uid);
@@ -66,9 +68,16 @@ for (const u of users.docs) {
       }
     }
     await ref.collection('server').doc('state').set({ sent: out.state.sent, jobs: JSON.stringify(out.state.jobs || {}), testDone, at: Date.now() });
+    // jobs in the person's Google Calendar (when they turned it on in the app)
+    const cal = settings.calendar;
+    if (cal && typeof cal === 'object') {
+      const calRef = ref.collection('private').doc('calendar'); const cs = await calRef.get(); const cd = cs.exists ? cs.data() : null;
+      if (cal.on || (cd && cd.id)) { const r = await syncCalendar({ sa: SA, cfg: cal, doc: cd, jobs, today: now.iso, force: typeof cal.syncAt === 'number' && cal.syncAt > ((cd && cd.at) || 0) });
+        if (r) { await calRef.set(r); calCount++; if (r.error) console.log('calendar:', r.error); } }
+    }
     // tidy: keep in-app notifications for 30 days
     const old = await ref.collection('notifications').where('at', '<', Date.now() - 30 * 864e5).limit(50).get(); for (const d of old.docs) await d.ref.delete();
   } catch (e) { console.log('person skipped:', e.message); }
 }
-console.log(`Checked ${people} account(s) at ${now.iso} ${Math.floor(now.mins / 60)}:${String(now.mins % 60).padStart(2, '0')} Melbourne; ${sentCount} push message(s) sent.`);
+console.log(`Checked ${people} account(s) at ${now.iso} ${Math.floor(now.mins / 60)}:${String(now.mins % 60).padStart(2, '0')} Melbourne; ${sentCount} push message(s) sent; ${calCount} calendar(s) updated.`);
 process.exit(0);
