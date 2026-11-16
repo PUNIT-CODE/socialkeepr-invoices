@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Fq6C0LDdfXmHbSTzALqsecqhgLvEkipGdHCsiJcok58=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-SOGRSZqXhLwWiCrjFa6zafsWRT6WjQYJbaHav1Bjbr0=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -333,6 +333,9 @@ button.stopno { border: 0; cursor: pointer; padding: 0; font: inherit; font-size
 .sharepanel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); display: flex; flex-direction: column; gap: 10px; }
 .sharepanel p { margin: 0; font-size: 14px; }
 .pwrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; } .pwrow label { flex: 1 1 200px; }
+.sharebig { position: relative; margin-bottom: 10px; } .sharebig > button { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 22px; font-size: 16px; }
+.sharemenu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; display: flex; flex-direction: column; min-width: 200px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); overflow: hidden; }
+.sharemenu a, .sharemenu button { padding: 12px 16px; text-align: left; color: var(--fg); text-decoration: none; background: none; border: 0; border-bottom: 1px solid var(--line); font: inherit; cursor: pointer; } .sharemenu > :last-child { border-bottom: 0; } .sharemenu a:hover, .sharemenu button:hover { background: var(--field); }
 .linkrow { display: flex; flex-wrap: wrap; gap: 8px; } .linkrow input { flex: 1 1 240px; font-family: var(--font-num); font-size: 12px; }
 .shareview { min-height: 100vh; padding-block: 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .lockcard { max-width: 420px; margin: 8vh auto 0; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
@@ -3268,6 +3271,7 @@ function openGallery(items, start) {
   show(); ov.querySelector('#galX').focus();
 }
 
+const SHARE_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
 async function makeShareLink(inv, pw, days, rc) {
   const payload = { v: 1, inv: cleanInvoice(inv), name: S(profile.name, 80), tfn: S(profile.tfn, 20), made: new Date().toISOString(), exp: days ? Date.now() + days * 864e5 : 0 };
   if (rc && rc.sh) payload.rc = rc;
@@ -3338,8 +3342,8 @@ function wireSharePanel(inv) {
         if ((inv.rows || []).some(r => r.receiptId)) { $('shOut').innerHTML = '<p class="status">Locking the receipt photos…</p>';
           try { rc = await uploadShareFiles(inv, days, (k, n) => { $('shOut').innerHTML = '<p class="status">Locking receipt photo ' + k + ' of ' + n + '…</p>'; }); } catch (e) { rc = { failed: true }; } }
         const link = await makeShareLink(inv, pw, days, rc && rc.sh ? rc : null);
-        $('shOut').innerHTML = '<div class="linkrow"><input id="shLink" type="text" readonly value="' + esc(link) + '" aria-label="Share link"><button class="secondary" type="button" id="shCopy">Copy link</button>' +
-          (navigator.share && !window.claude ? '<button class="secondary" type="button" id="shSend">Send…</button>' : '') + '</div><p class="status" id="shMsg" role="status"></p>' +
+        $('shOut').innerHTML = '<div class="sharebig"><button class="primary" type="button" id="shSend">' + SHARE_SVG + 'Share via…</button><div class="sharemenu" id="shMenu" hidden></div></div>' +
+          '<div class="linkrow"><input id="shLink" type="text" readonly value="' + esc(link) + '" aria-label="Share link"><button class="secondary" type="button" id="shCopy">Copy link</button></div><p class="status" id="shMsg" role="status"></p>' +
           (rc && rc.sh ? '<p class="status ok">' + rc.files.length + ' receipt photo' + (rc.files.length === 1 ? '' : 's') + ' included. Your boss will see them as a gallery under the invoice.</p>'
             : rc && rc.skipped ? '<p class="notice warn">The receipt photos are not in this link: sign in on the Account page first, then make the link again. (The downloaded PDF still has them.)</p>'
             : rc && rc.failed ? '<p class="notice warn">The receipt photos could not be added (no internet?). The invoice itself is in the link. Try again to include the photos.</p>' : '');
@@ -3348,7 +3352,19 @@ function wireSharePanel(inv) {
           const done = ok => { $('shMsg').className = 'status ' + (ok ? 'ok' : ''); $('shMsg').textContent = ok ? 'Link copied. Paste it into your message.' : 'Select the link above and copy it.'; if (!ok) $('shLink').select(); };
           try { navigator.clipboard.writeText(link).then(() => done(true), () => done(false)); } catch (e) { done(false); }
         });
-        if ($('shSend')) $('shSend').addEventListener('click', () => { navigator.share({ title: 'Tax invoice ' + inv.no, text: 'Tax invoice ' + inv.no + ' (' + fmtDate(inv.date) + ')', url: link }).catch(() => {}); });
+        // Apple's share sheet (recent people, Messages, Mail, WhatsApp, AirDrop…) where the browser has one; a small menu elsewhere
+        const shareText = 'Tax invoice ' + inv.no + (inv.weekStart ? ' for ' + weekLabel(inv.weekStart) : ' (' + fmtDate(inv.date) + ')') + (profile.name ? ' from ' + profile.name : '');
+        const shareData = { title: 'Tax invoice ' + inv.no, text: shareText, url: link };
+        $('shSend').addEventListener('click', async () => {
+          if (navigator.share && !window.claude && (!navigator.canShare || navigator.canShare(shareData))) {
+            try { await navigator.share(shareData); $('shMsg').className = 'status ok'; $('shMsg').textContent = 'Shared.'; return; }
+            catch (e) { if (e && e.name === 'AbortError') return; }
+          }
+          const m = $('shMenu'); if (!m.hidden) { m.hidden = true; return; }
+          const body = encodeURIComponent(shareText + '\n' + link);
+          m.innerHTML = '<a href="sms:&body=' + body + '">Messages</a><a href="mailto:?subject=' + encodeURIComponent(shareData.title) + '&body=' + body + '">Email</a><a href="https://wa.me/?text=' + body + '" target="_blank" rel="noopener">WhatsApp</a><button type="button" id="shMenuCopy">Copy link</button>';
+          m.hidden = false; $('shMenuCopy').addEventListener('click', () => { m.hidden = true; $('shCopy').click(); });
+        });
       } catch (e) { $('shOut').innerHTML = '<p class="status bad">This browser could not make the link. Try a current version of Chrome, Safari or Edge.</p>'; }
       $('shMake').disabled = false;
     });
