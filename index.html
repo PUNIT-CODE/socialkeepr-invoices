@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-SOGRSZqXhLwWiCrjFa6zafsWRT6WjQYJbaHav1Bjbr0=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-5pSfmJIfvm/iTPyuYzZWIvVZ8HcnutVXUtLmPIOkUOg=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -13,8 +13,10 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Boothkeepr">
-<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
 </head>
 <body>
 <title>Boothkeepr</title>
@@ -57,6 +59,32 @@
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 15px; line-height: 1.45; }
 button { font: inherit; }
+body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: #0f0d12; z-index: 60; pointer-events: none; }
+.side { padding-top: calc(16px + env(safe-area-inset-top, 0px)) !important; }
+.main { padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important; }
+@media (min-width: 900px) { .main { padding-top: calc(20px + env(safe-area-inset-top, 0px)) !important; } }
+.shareview { padding-top: calc(32px + env(safe-area-inset-top, 0px)) !important; padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)) !important; }
+/* live pill under the Dynamic Island */
+.island { position: fixed; z-index: 65; top: calc(env(safe-area-inset-top, 0px) + 6px); left: 50%; transform: translateX(-50%); background: #000; color: #fff; border-radius: 999px; box-shadow: 0 6px 24px rgba(0,0,0,.28); cursor: pointer; transition: border-radius .35s cubic-bezier(.2,.9,.25,1.1), width .35s cubic-bezier(.2,.9,.25,1.1); font-family: var(--font-ui); max-width: calc(100vw - 24px); animation: isIn .45s cubic-bezier(.2,.9,.25,1.2); }
+@keyframes isIn { from { transform: translateX(-50%) scale(.6); opacity: 0; } }
+.iscompact { display: flex; align-items: center; gap: 8px; padding: 7px 14px 7px 10px; font-size: 13px; white-space: nowrap; }
+.isl { font-weight: 600; } .ist { color: #ffb3dc; font-variant-numeric: tabular-nums; }
+.isdot { width: 8px; height: 8px; border-radius: 50%; background: #ff3ea5; box-shadow: 0 0 0 0 rgba(255,62,165,.7); animation: isPulse 2s infinite; }
+.isdot.hot { background: #ff9a3c; box-shadow: 0 0 0 0 rgba(255,154,60,.7); } .isdot.on { background: #31d07a; box-shadow: 0 0 0 0 rgba(49,208,122,.7); }
+@keyframes isPulse { 70% { box-shadow: 0 0 0 7px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
+.island.open { border-radius: 28px; width: min(380px, calc(100vw - 24px)); cursor: default; }
+.isbig { padding: 14px 16px 14px; }
+.ishead { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; } .ishead b { display: block; font-size: 16px; } .ishead span { font-size: 12px; color: #c9bfd0; }
+.isx { background: rgba(255,255,255,.14); border: 0; color: #fff; width: 30px; height: 30px; border-radius: 50%; font-size: 20px; line-height: 1; cursor: pointer; }
+.istl { list-style: none; margin: 12px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.istl li { display: grid; grid-template-columns: 74px auto 1fr; gap: 8px; align-items: baseline; color: #e9e3ee; } .istl li span { font-variant-numeric: tabular-nums; color: #a99fb1; } .istl li em { font-style: normal; color: #a99fb1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.istl li.done { opacity: .45; text-decoration: line-through; } .istl li.next b, .istl li.next span { color: #ff8fcb; } .istl li.now b, .istl li.now span { color: #5fe39b; }
+.isbtns { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; }
+.isbtns a, .isbtns button { background: rgba(255,255,255,.12); color: #fff; border: 0; border-radius: 12px; padding: 10px 6px; text-align: center; text-decoration: none; font: 600 13px var(--font-ui); cursor: pointer; }
+.isbtns a:hover, .isbtns button:hover { background: rgba(255,255,255,.2); } .island:focus-visible { outline: 2px solid #ff8fcb; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .island, .isdot { animation: none; transition: none; } }
+@media (min-width: 900px) { .island { left: calc(50% + 130px); } }
+@media (max-width: 899px) { body.has-island .side { padding-top: calc(54px + env(safe-area-inset-top, 0px)) !important; } }
 .app { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 100%; }
 @media (min-width: 900px) { .app { grid-template-columns: 290px minmax(0, 1fr); } }
 
@@ -333,7 +361,7 @@ button.stopno { border: 0; cursor: pointer; padding: 0; font: inherit; font-size
 .sharepanel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); display: flex; flex-direction: column; gap: 10px; }
 .sharepanel p { margin: 0; font-size: 14px; }
 .pwrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; } .pwrow label { flex: 1 1 200px; }
-.sharebig { position: relative; margin-bottom: 10px; } .sharebig > button { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 22px; font-size: 16px; }
+.sharebig { position: relative; margin-bottom: 10px; } .sharebig > button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; font-size: 14px; } .sharebig > button svg { width: 15px; height: 15px; }
 .sharemenu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; display: flex; flex-direction: column; min-width: 200px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); overflow: hidden; }
 .sharemenu a, .sharemenu button { padding: 12px 16px; text-align: left; color: var(--fg); text-decoration: none; background: none; border: 0; border-bottom: 1px solid var(--line); font: inherit; cursor: pointer; } .sharemenu > :last-child { border-bottom: 0; } .sharemenu a:hover, .sharemenu button:hover { background: var(--field); }
 .linkrow { display: flex; flex-wrap: wrap; gap: 8px; } .linkrow input { flex: 1 1 240px; font-family: var(--font-num); font-size: 12px; }
@@ -784,7 +812,7 @@ function freshDraft() {
 }
 
 /* ---------- render ---------- */
-function render() { if (renderGate()) return; renderSide(); const v = $('view');
+function render() { if (renderGate()) { renderIsland(); return; } setTimeout(renderIsland, 0); renderSide(); const v = $('view');
   if (route.name === 'dash') { v.innerHTML = dashHTML(); wireDash(); if (loaded) offerBio(); }
   else if (route.name === 'edit') renderEditor();
   else if (route.name === 'inv') renderInvoice(route.no);
@@ -2053,6 +2081,7 @@ const cloud = {
     }, () => { splash.ok('settings', 'sheet'); }));
   },
   async migrate() { // copy what was saved on this device before signing in, once per account
+    if (!this.user) return; // signed out before the start screen finished
     const key = 'migrated.' + this.user.uid; if (store.get(key, false)) return;
     const local = cleanList(store.get('invoices', [])); const lp = store.get('profile', {});
     const fresh = local.filter(i => !byNo(i.no));
@@ -3070,6 +3099,66 @@ async function renderNotify() {
 // opened from a notification: ?go=route etc.
 (function openFromNotification() { const v = new URLSearchParams(location.search).get('go'); if (!v) return; history.replaceState(null, '', location.pathname);
   setTimeout(() => { if (v === 'edit') $('navNew').click(); else if (v === 'invdraft') draftWeekInvoice(); else if (['runsheet', 'route', 'messages', 'dash', 'notify'].includes(v)) go({ name: v }); }, 600); })();
+
+/* ---------- live pill under the Dynamic Island ----------
+   On an event day, a black capsule sits just under the iPhone's Dynamic Island (top centre on other screens)
+   with the next thing to do and a countdown. Tap it to expand: the day's timeline, navigate, call, message. */
+let islandOpen = false, islandTimer = null;
+function todayJobsLive() {
+  const t = todayISO(); const key = t.slice(0, 7); const c = sheetCache[key]; if (!c) return [];
+  const data = typeof withSpill === 'function' ? withSpill(Object.assign({ key }, c)) : c;
+  return (data.jobs || []).filter(j => j.date === t);
+}
+// the day's moments, from the saved route plan when there is one, otherwise from the booth times
+function islandMoments() {
+  const jobs = todayJobsLive(); if (!jobs.length) return { jobs, list: [] };
+  const list = []; const cfg = rtCfg(); const plan = store.get(planKey(todayISO()), null); const r = plan && plan.result;
+  if (r && Array.isArray(r.steps) && r.steps.length && r.leave != null) {
+    list.push({ at: r.leave, label: 'Leave', sub: S(r.startLabel || 'home', 40), kind: 'leave' });
+    r.steps.forEach(st => { const s = (r.stops || []).find(x => x.id === st.id); if (!s) return; const j = jobs.find(x => jobKey(x) === s.job || x.key === s.job) || jobs.find(x => x.client === s.name);
+      list.push({ at: st.begin, label: s.label || (s.kind === 'pack' ? 'Pack down' : 'Set up'), sub: S(s.place || s.name, 50), kind: s.kind === 'pack' ? 'pack' : 'setup', job: j }); });
+  }
+  jobs.forEach(j => { const br = boothRange(j.booth); if (!br) return;
+    if (!list.some(m => m.job === j && m.kind === 'setup')) list.push({ at: br.start - cfg.setupMins, label: 'Set up', sub: S(j.venue || j.suburb, 50), kind: 'setup', job: j });
+    list.push({ at: br.start, label: 'Booth opens', sub: S(j.client, 40), kind: 'open', job: j, end: br.end });
+    if (!list.some(m => m.job === j && m.kind === 'pack')) list.push({ at: br.end, label: 'Pack down', sub: S(j.venue || j.suburb, 50), kind: 'pack', job: j }); });
+  list.sort((a, b) => a.at - b.at);
+  const seen = new Set(); const out = list.filter(m => { const k = m.at + '|' + m.label + '|' + m.sub; if (seen.has(k)) return false; seen.add(k); return true; });
+  return { jobs, list: out };
+}
+function islandState() {
+  const { jobs, list } = islandMoments(); if (!list.length) return null;
+  const d = new Date(); const now = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+  const live = list.find(m => m.kind === 'open' && now >= m.at && now < m.end);
+  const next = list.find(m => m.at > now);
+  if (!next && !live) return null;
+  return { jobs, list, now, live, next };
+}
+const isAgo = mins => { const m = Math.max(0, Math.round(mins)); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : ''); };
+function renderIsland() {
+  let el = $('island'); const st = (gateState() || !cloud.user && mode === 'cloud') ? null : islandState();
+  document.body.classList.toggle('has-island', !!st);
+  if (!st) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'island'; el.className = 'island'; document.body.appendChild(el);
+    el.addEventListener('click', e => { if (e.target.closest('a, [data-msg], .isx')) { if (e.target.closest('.isx')) { islandOpen = false; renderIsland(); } return; } if (!islandOpen) { islandOpen = true; renderIsland(); } }); }
+  const n = st.next, live = st.live;
+  const urgent = n && n.at - st.now <= 30;
+  const compact = live && (!n || n.at - st.now > 30)
+    ? '<i class="isdot on"></i><span class="isl">Booth on</span><span class="ist">ends ' + esc(hm(live.end)) + '</span>'
+    : '<i class="isdot ' + (urgent ? 'hot' : '') + '"></i><span class="isl">' + esc(n.label) + '</span><span class="ist">' + (n.at - st.now < 90 ? 'in ' + esc(isAgo(n.at - st.now)) : esc(hm(n.at))) + '</span>';
+  el.classList.toggle('open', islandOpen); el.setAttribute('role', islandOpen ? 'dialog' : 'button'); el.setAttribute('aria-label', islandOpen ? 'Today’s jobs' : 'Today: ' + el.textContent);
+  if (!islandOpen) { el.tabIndex = 0; el.innerHTML = '<div class="iscompact">' + compact + '</div>'; return; }
+  const j = (n && n.job) || (live && live.job) || st.jobs[0]; const c = j ? contactsFor(j)[0] : null;
+  el.innerHTML = '<div class="isbig"><div class="ishead"><div><b>' + esc(j ? j.client : 'Today') + '</b><span>' + esc(j ? [/glam/i.test(j.style || '') ? 'GLAM' : /print/i.test(j.style || '') ? 'PRINTSY' : '', prettyBackdrop(j.backdrop || '')].filter(Boolean).join(' · ') : '') + '</span></div><button type="button" class="isx" aria-label="Close">×</button></div>' +
+    '<ol class="istl">' + st.list.map(m => '<li class="' + (m.at <= st.now && !(m === live) ? 'done' : m === n ? 'next' : m === live ? 'now' : '') + '"><span>' + esc(hm(m.at)) + '</span><b>' + esc(m.label) + '</b><em>' + esc(m.sub || '') + '</em></li>').join('') + '</ol>' +
+    '<div class="isbtns">' + (j ? '<a href="' + esc(mapsHref(j)) + '" target="_blank" rel="noopener">Navigate</a>' : '') + (c ? '<a href="tel:' + esc(c.num) + '">Call</a>' : '') + (j ? '<button type="button" data-msg="' + esc(jobKey(j)) + '">Message</button>' : '') + '<a href="#" data-isroute="1">Route</a></div></div>';
+  if (j) jobIndex.set(jobKey(j), j);
+  const rl = el.querySelector('[data-isroute]'); rl.addEventListener('click', e => { e.preventDefault(); islandOpen = false; go({ name: 'route' }); });
+}
+document.addEventListener('click', e => { if (islandOpen && !e.composedPath().some(n => n && n.id === 'island')) { islandOpen = false; renderIsland(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && islandOpen) { islandOpen = false; renderIsland(); } else if ((e.key === 'Enter' || e.key === ' ') && e.target.id === 'island' && !islandOpen) { e.preventDefault(); islandOpen = true; renderIsland(); } });
+setInterval(() => { if (document.visibilityState === 'visible') renderIsland(); }, 30000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') renderIsland(); });
 
 /* ---------- sign-in page and Face ID / Touch ID lock ----------
    Signed out: the whole app is replaced by a sign-in page. Signed in with the lock on: the app stays hidden
