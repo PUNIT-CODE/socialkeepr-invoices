@@ -3,7 +3,8 @@
 // It never prints personal details (client names, phone numbers) to the log.
 import admin from 'firebase-admin';
 import webpush from 'web-push';
-import { melbNow, due, csvRows, jobsFromGrid, tabNames, addDays } from './logic.mjs';
+import fs from 'node:fs';
+import { melbNow, due, csvRows, jobsFromGrid, tabNames, addDays, invoiceWeekStart, mergePrefs } from './logic.mjs';
 import { syncCalendar } from './calendar.mjs';
 import { syncICloud } from './icloud.mjs';
 
@@ -16,6 +17,7 @@ webpush.setVapidDetails('https://punit-code.github.io/socialkeepr-invoices/', VA
 const db = admin.firestore();
 const now = melbNow(process.env.FAKE_NOW ? new Date(process.env.FAKE_NOW) : new Date());
 
+const money = n => '$' + (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const sheetCache = new Map();
 async function sheetJobs(link) {
   const m = String(link || '').match(/\/d\/(?:e\/)?([a-zA-Z0-9_-]{20,})/); if (!m) return null; const id = m[1];
@@ -39,7 +41,7 @@ async function sheetJobs(link) {
   sheetCache.set(id, all); return all;
 }
 
-let sentCount = 0, people = 0, calCount = 0;
+let sentCount = 0, people = 0, calCount = 0; const robotDue = [];
 const users = await db.collection('users').get();
 for (const u of users.docs) {
   const uid = u.id; const ref = db.collection('users').doc(uid);
@@ -51,6 +53,20 @@ for (const u of users.docs) {
     for (const d of [now.iso, addDays(now.iso, -1)]) { const p = await ref.collection('private').doc('plan-' + d).get(); if (p.exists) { try { plans[d] = JSON.parse(p.data().json || 'null'); } catch (e) {} } }
     const st = stateSnap.exists ? stateSnap.data() : {};
     const out = due({ now, jobs, prefs: settings.notify, invoices: invSnap.docs.map(d => d.data()), plans, route: settings.route, state: { sent: st.sent || {}, jobs: st.jobs ? JSON.parse(st.jobs) : null } });
+    // invoice autopilot: on the invoice day (or when asked from the app) the robot makes the invoice instead of a reminder
+    const ap = settings.autopilot && settings.autopilot.on === true ? settings.autopilot : null;
+    if (ap) {
+      out.notes = out.notes.filter(n => n.kind !== 'invoice');
+      const rs = await ref.collection('server').doc('robot').get(); const rb = rs.exists ? rs.data() : {};
+      const pr = mergePrefs(settings.notify); const ws = invoiceWeekStart(now.iso);
+      const invDay = addDays(ws, 7 + ((pr.invoice.day + 6) % 7));
+      const timeCome = now.iso > invDay || (now.iso === invDay && now.mins >= pr.invoice.at);
+      const made = invSnap.docs.some(d => d.data().weekStart === ws);
+      if ((timeCome && rb.ws !== ws && !made) || (typeof ap.runAt === 'number' && ap.runAt > (rb.runAt || 0))) robotDue.push(uid);
+      // once the Shortcut (or the app) has sent it, say so
+      if (rb.ws && rb.out && !rb.sentTold) { const o = await db.collection('outbox').doc(rb.out).get(); const od = o.exists ? o.data() : null;
+        if (od && od.sentAt && od.ws === rb.ws) { out.notes.push({ key: 'apsent-' + rb.ws, kind: 'autopilot', view: 'autopilot', title: 'Invoice ' + od.no + ' sent', body: 'Your boss has invoice ' + od.no + ' (' + money(od.total) + ')' + (od.sentVia === 'app' ? '.' : ' on WhatsApp.') }); await rs.ref.set({ sentTold: true }, { merge: true }); } }
+    }
     // "Send me a test reminder" from the Notifications page (requested in the last 2 hours, not yet sent)
     const testAt = settings.notify && typeof settings.notify.testAt === 'number' ? settings.notify.testAt : 0;
     let testDone = st.testDone || 0;
@@ -87,5 +103,6 @@ for (const u of users.docs) {
     const old = await ref.collection('notifications').where('at', '<', Date.now() - 30 * 864e5).limit(50).get(); for (const d of old.docs) await d.ref.delete();
   } catch (e) { console.log('person skipped:', e.message); }
 }
+if (robotDue.length) { fs.writeFileSync('robot-due.json', JSON.stringify(robotDue)); if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, 'robot=true\n'); console.log(robotDue.length + ' invoice(s) for the autopilot to make.'); }
 console.log(`Checked ${people} account(s) at ${now.iso} ${Math.floor(now.mins / 60)}:${String(now.mins % 60).padStart(2, '0')} Melbourne; ${sentCount} push message(s) sent; ${calCount} calendar(s) updated.`);
 process.exit(0);

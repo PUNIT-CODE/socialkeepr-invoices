@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-5pSfmJIfvm/iTPyuYzZWIvVZ8HcnutVXUtLmPIOkUOg=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-M4NyStJ2Rn2VCQzWhcCV0/Y+/d0Fr2mVTz4UYdEupGs=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -451,6 +451,11 @@ body.noscroll { overflow: hidden; }
 
 /* run sheet: Cards / Sheet switch, and the spreadsheet view */
 .viewseg { align-self: flex-start; }
+.apfield { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; } .apfield > span { font-size: 13px; color: var(--muted); } .apfield em { font-style: normal; color: var(--accent); }
+.apsteps { margin: 6px 0 14px; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.5; } .apsteps code, .apfield code { font-size: 12.5px; }
+.apgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; } .apgrid figure { margin: 0; } .apgrid img { width: 100%; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: var(--field); } .apgrid figcaption { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.apwhy { margin: 6px 0 10px; padding-left: 20px; font-size: 14px; color: var(--fg); } .dot.warnd { background: #f29900; }
+button.sm { padding: 6px 12px; font-size: 13px; min-height: 0; }
 .btnlink { display: inline-flex; align-items: center; text-decoration: none; }
 a.primary.btnlink { font-weight: 600; background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 12px 18px; }
 .calsteps { margin: 0 0 12px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
@@ -570,6 +575,7 @@ a.primary.btnlink { font-weight: 600; background: var(--accent); color: var(--ac
     <nav class="nav" aria-label="Main">
       <button class="navbtn new" type="button" id="navNew">+ New invoice</button>
       <button class="navbtn" type="button" id="navDash">Dashboard</button>
+      <button class="navbtn" type="button" id="navAuto">Autopilot</button>
       <button class="navbtn" type="button" id="navNotify">Notifications <span class="nbadge" id="nBadge" hidden></span></button>
       <button class="navbtn" type="button" id="navMsg">Client messages</button>
       <button class="navbtn" type="button" id="navRoute">Route planner</button>
@@ -681,7 +687,9 @@ function cleanSettings(d) {
     notify = { tomorrow: { on: b((np.tomorrow || {}).on), at: t((np.tomorrow || {}).at, 1140) }, confirm: { on: b((np.confirm || {}).on) }, sheet: { on: b((np.sheet || {}).on) }, invoice: { on: b((np.invoice || {}).on), day: num((np.invoice || {}).day, 0, 6, 4), at: t((np.invoice || {}).at, 480) }, event: { on: b((np.event || {}).on), lead: num((np.event || {}).lead, 10, 240, 60) }, quiet: { from: t((np.quiet || {}).from, 1320), to: t((np.quiet || {}).to, 420) } }; if (typeof np.testAt === 'number' && isFinite(np.testAt) && np.testAt > 0) notify.testAt = Math.floor(np.testAt); }
   const cs = d && d.calendar && typeof d.calendar === 'object' ? d.calendar : null;
   const calendar = cs ? { on: cs.on === true, kind: cs.kind === 'google' ? 'google' : 'icloud', email: /^[^@\s]{1,100}@[^@\s]{1,100}\.[^@\s]{1,40}$/.test(S(cs.email, 200)) ? S(cs.email, 200) : '', syncAt: typeof cs.syncAt === 'number' && isFinite(cs.syncAt) ? Math.floor(cs.syncAt) : 0 } : null;
-  return { merchants: m, sheetLink: S(d && d.sheetLink, 300), templates: tp, route, venueHours: vh, ...(notify ? { notify } : {}), ...(calendar ? { calendar } : {}), routeEngine: d && d.routeEngine === 'free' ? 'free' : 'auto', mapsKey: /^[A-Za-z0-9_-]{0,60}$/.test(S(d && d.mapsKey, 60)) ? S(d && d.mapsKey, 60) : '' };
+  const ap = d && d.autopilot && typeof d.autopilot === 'object' ? d.autopilot : null;
+  const autopilot = ap ? { on: ap.on === true, send: ap.send === 'ask' ? 'ask' : 'auto', boss: S(ap.boss, 30).replace(/[^\d+ ()-]/g, ''), pw: S(ap.pw, 40) || 'tax-invoice', days: num(ap.days, 0, 365, 30), match: S(ap.match, 60) || 'Transaction details', runAt: typeof ap.runAt === 'number' && isFinite(ap.runAt) ? Math.floor(ap.runAt) : 0 } : null;
+  return { merchants: m, sheetLink: S(d && d.sheetLink, 300), templates: tp, route, venueHours: vh, ...(notify ? { notify } : {}), ...(calendar ? { calendar } : {}), ...(autopilot ? { autopilot } : {}), routeEngine: d && d.routeEngine === 'free' ? 'free' : 'auto', mapsKey: /^[A-Za-z0-9_-]{0,60}$/.test(S(d && d.mapsKey, 60)) ? S(d && d.mapsKey, 60) : '' };
 }
 function tooBig(f, max = LIMITS.uploadBytes) { return !f || f.size > max; }
 
@@ -757,6 +765,7 @@ $('navRun').addEventListener('click', () => go({ name: 'runsheet' }));
 $('acctBtn').addEventListener('click', () => go({ name: 'account' }));
 $('navMsg').addEventListener('click', () => go({ name: 'messages' }));
 $('navNotify').addEventListener('click', () => { nstate.checked = false; go({ name: 'notify' }); });
+$('navAuto').addEventListener('click', () => { apBox = null; apDrop = null; go({ name: 'autopilot' }); });
 $('navRoute').addEventListener('click', () => go({ name: 'route' }));
 const weekOfInv = inv => inv.weekStart || invoiceWeekStart(inv.date);
 function invoiceForWeek(ws, exceptNo) { return sorted().find(i => weekOfInv(i) === ws && Number(i.no) !== Number(exceptNo)); }
@@ -821,6 +830,7 @@ function render() { if (renderGate()) { renderIsland(); return; } setTimeout(ren
   else if (route.name === 'account') renderAccount();
   else if (route.name === 'messages') renderMessages();
   else if (route.name === 'notify') renderNotify();
+  else if (route.name === 'autopilot') renderAutopilot();
   else if (route.name === 'route') renderRoute();
 }
 
@@ -835,6 +845,7 @@ function renderSide() {
   $('navRun').setAttribute('aria-current', route.name === 'runsheet' ? 'page' : 'false');
   $('navMsg').setAttribute('aria-current', route.name === 'messages' ? 'page' : 'false');
   $('navNotify').setAttribute('aria-current', route.name === 'notify' ? 'page' : 'false');
+  $('navAuto').setAttribute('aria-current', route.name === 'autopilot' ? 'page' : 'false');
   { const nb = $('nBadge'); const n = typeof unreadCount === 'function' ? unreadCount() : 0; nb.hidden = !n; nb.textContent = n > 9 ? '9+' : String(n); }
   $('navRoute').setAttribute('aria-current', route.name === 'route' ? 'page' : 'false');
   const list = $('invList'); const all = sorted();
@@ -2049,7 +2060,9 @@ const cloud = {
     this.auth = F.initializeAuth(app, { persistence: [F.indexedDBLocalPersistence, F.browserLocalPersistence], popupRedirectResolver: F.browserPopupRedirectResolver });
     this.fs = F.initializeFirestore(app, { localCache: F.persistentLocalCache({ tabManager: F.persistentMultipleTabManager() }) });
     this.ready = true; this.status = 'signedout';
-    F.onAuthStateChanged(this.auth, u => this.onUser(u));
+    let robotStarted = false;
+    F.onAuthStateChanged(this.auth, u => { this.onUser(u); if (robotToken && u && !robotStarted) { robotStarted = true; robotRun(); } });
+    if (robotToken) F.signInWithCustomToken(this.auth, robotToken).catch(e => { window.__robotResult = { status: 'error', reasons: ['Robot sign-in failed: ' + S(e && e.code, 60)] }; });
   },
   ref(...p) { return window.SKFB.doc(this.fs, 'users', this.user.uid, ...p); },
   col(name) { return window.SKFB.collection(this.fs, 'users', this.user.uid, name); },
@@ -2105,7 +2118,7 @@ const cloud = {
   delReceipt(id) { return window.SKFB.deleteDoc(window.SKFB.doc(this.col('receipts'), id)); },
   saveProfile(p) { return window.SKFB.setDoc(this.ref('private', 'profile'), { name: S(p.name, 80), tfn: S(p.tfn, 20) }); },
   saveMember(d) { d = Object.assign({}, d); if ('name' in d) d.name = S(d.name, 40); if ('phone' in d) d.phone = S(d.phone, 20); if ('photo' in d) d.photo = safePhoto(d.photo); return window.SKFB.updateDoc(window.SKFB.doc(this.fs, 'users', this.user.uid), Object.assign({ updatedAt: new Date().toISOString() }, d)); },
-  saveSettings() { return window.SKFB.setDoc(this.ref('private', 'settings'), cleanSettings({ merchants: settings.merchants, sheetLink: sheetCfg.link, templates: settings.templates, route: settings.route, mapsKey: settings.mapsKey, venueHours: settings.venueHours, routeEngine: settings.routeEngine, notify: settings.notify, calendar: settings.calendar })).catch(() => {}); },
+  saveSettings() { return window.SKFB.setDoc(this.ref('private', 'settings'), cleanSettings({ merchants: settings.merchants, sheetLink: sheetCfg.link, templates: settings.templates, route: settings.route, mapsKey: settings.mapsKey, venueHours: settings.venueHours, routeEngine: settings.routeEngine, notify: settings.notify, calendar: settings.calendar, autopilot: settings.autopilot })).catch(() => {}); },
   async signOutAll() {
     const F = window.SKFB;
     const saved = await Promise.race([F.waitForPendingWrites(this.fs).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), 6000))]);
@@ -3098,7 +3111,7 @@ async function renderNotify() {
 }
 // opened from a notification: ?go=route etc.
 (function openFromNotification() { const v = new URLSearchParams(location.search).get('go'); if (!v) return; history.replaceState(null, '', location.pathname);
-  setTimeout(() => { if (v === 'edit') $('navNew').click(); else if (v === 'invdraft') draftWeekInvoice(); else if (['runsheet', 'route', 'messages', 'dash', 'notify'].includes(v)) go({ name: v }); }, 600); })();
+  setTimeout(() => { if (v === 'edit') $('navNew').click(); else if (v === 'invdraft') draftWeekInvoice(); else if (v === 'autopilot') { apBox = null; apDrop = null; go({ name: 'autopilot' }); } else if (['runsheet', 'route', 'messages', 'dash', 'notify'].includes(v)) go({ name: v }); }, 600); })();
 
 /* ---------- live pill under the Dynamic Island ----------
    On an event day, a black capsule sits just under the iPhone's Dynamic Island (top centre on other screens)
@@ -3159,6 +3172,162 @@ document.addEventListener('click', e => { if (islandOpen && !e.composedPath().so
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && islandOpen) { islandOpen = false; renderIsland(); } else if ((e.key === 'Enter' || e.key === ' ') && e.target.id === 'island' && !islandOpen) { e.preventDefault(); islandOpen = true; renderIsland(); } });
 setInterval(() => { if (document.visibilityState === 'visible') renderIsland(); }, 30000);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') renderIsland(); });
+
+/* ---------- invoice autopilot ----------
+   1. Thursday 7:30 an iPhone Shortcut finds last week's CommBank screenshots and uploads them to users/<uid>/inbox,
+      proving itself with an upload key (private/drop.k) because it is not signed in.
+   2. The reminder service then opens this app in a robot browser (robotRun below), signed in with a one-off token:
+      it reads the screenshots with the same receipt reader as the editor, builds last week's invoice from the run
+      sheet, saves it and makes the password link with the receipt gallery.
+   3. The result goes to outbox/<long secret key> (written by the service), which a second Shortcut reads to send
+      the message on WhatsApp, then marks it sent. Anything that looks wrong is held for the person to check. */
+const AP_DEF = { on: false, send: 'auto', boss: '', pw: 'tax-invoice', days: 30, match: 'Transaction details', runAt: 0 };
+const apCfg = () => Object.assign({}, AP_DEF, settings.autopilot || {});
+const randKey = () => b64u.enc(crypto.getRandomValues(new Uint8Array(30)));
+let apDrop = null, apOut = null, apBox = null, apMsg = null;
+const waNumber = n => { let d = String(n || '').replace(/[^\d+]/g, ''); if (d.startsWith('+')) d = d.slice(1); else if (d.startsWith('0')) d = '61' + d.slice(1); return /^\d{8,15}$/.test(d) ? d : ''; };
+function waLink(boss, text) { const n = waNumber(boss); return 'https://wa.me/' + n + '?text=' + encodeURIComponent(text); }
+const restBase = () => 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(GC_PROJECT) + '/databases/(default)/documents';
+async function apLoad() {
+  if (mode !== 'cloud' || !cloud.user) return; const F = window.SKFB;
+  try { const d = await F.getDoc(cloud.ref('private', 'drop')); apDrop = d.exists() ? d.data() : null; } catch (e) {}
+  if (apDrop && apDrop.out) { try { const o = await F.getDoc(F.doc(cloud.fs, 'outbox', apDrop.out)); apOut = o.exists() ? o.data() : null; } catch (e) { apOut = null; } }
+  try { const s = await F.getDocs(cloud.col('inbox')); apBox = s.docs.map(x => Object.assign({ id: x.id }, x.data())).sort((a, b) => String(b.takenAt || '').localeCompare(String(a.takenAt || ''))); } catch (e) { apBox = []; }
+}
+async function apMakeKeys() {
+  const F = window.SKFB; const doc = { k: randKey(), out: randKey(), at: new Date().toISOString() };
+  await F.setDoc(cloud.ref('private', 'drop'), doc); apDrop = doc;
+}
+const copyBtn = (id, label) => '<button class="secondary sm" type="button" data-copy="' + id + '">' + (label || 'Copy') + '</button>';
+function apField(id, label, value, note) { return '<div class="apfield"><span>' + esc(label) + (note ? ' <em>' + esc(note) + '</em>' : '') + '</span><div class="linkrow"><input id="' + id + '" type="text" readonly value="' + esc(value) + '">' + copyBtn(id) + '</div></div>'; }
+async function renderAutopilot() {
+  const v = $('view'); const signed = mode === 'cloud' && cloud.user;
+  if (!signed) { v.innerHTML = '<div class="pagehead"><div><h1>Invoice autopilot</h1><p>Sign in first.</p></div></div>'; return; }
+  if (!apDrop && apBox == null) { v.innerHTML = '<div class="pagehead"><div><h1>Invoice autopilot</h1><p>Loading…</p></div></div>'; await apLoad(); if (route.name !== 'autopilot') return; }
+  const c = apCfg(); const ws = invoiceWeekStart(todayISO());
+  const day = DAYNAME[(nprefs().invoice || {}).day ?? 4] || 'Thursday';
+  const out = apOut && apOut.ws ? apOut : null;
+  const st = !c.on ? '' : !out ? '<p class="syncline"><i class="dot unpaid"></i>Waiting for ' + esc(day) + '. Nothing made yet.</p>'
+    : '<p class="syncline"><i class="dot ' + (out.sentAt ? 'paid' : out.status === 'hold' || out.status === 'error' ? 'warnd' : 'unpaid') + '"></i>' +
+      (out.no ? 'Invoice ' + esc(out.no) + ' for ' + esc(weekLabel(out.ws)) + ' (' + esc(money(out.total || 0)) + ')' : 'Week of ' + esc(weekLabel(out.ws))) + ' · ' +
+      esc(out.sentAt ? 'sent ' + new Date(out.sentAt).toLocaleString('en-AU', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : out.status === 'send' ? 'ready, the Shortcut sends it' : out.status === 'ask' ? 'ready for you to send' : out.status === 'hold' ? 'held for you to check' : out.status === 'exists' ? 'you had already made it' : 'could not be made') + '</p>' +
+      ((out.reasons || []).length ? '<ul class="apwhy">' + out.reasons.map(r => '<li>' + esc(r) + '</li>').join('') + '</ul>' : '') +
+      ((out.notes || []).length ? '<p class="hint">' + out.notes.map(esc).join(' ') + '</p>' : '') +
+      (out.no && !out.sentAt && out.text ? '<div class="actions"><a class="primary btnlink" id="apSendNow" href="' + esc(waLink(c.boss, out.text)) + '" target="_blank" rel="noopener">Send on WhatsApp</a><button class="secondary" type="button" id="apOpenInv">Check invoice ' + esc(out.no) + '</button></div>' : '');
+  const box = apBox || [];
+  const shortcutA = apDrop ? [
+    'Open the <b>Shortcuts</b> app → <b>+</b> (top right). Name it <b>Boothkeepr receipts</b>.',
+    'Add <b>Find Photos</b>. Tap <b>Add Filter</b> → <b>Is a Screenshot</b> is <b>true</b>. Add another filter: <b>Date Taken</b> is in the last <b>8 days</b>. Turn on <b>Limit</b> and set it to <b>40</b>.',
+    'Add <b>Repeat with Each</b> (it uses the photos from step 2).',
+    'Inside the repeat, add <b>Extract Text from Image</b> (it picks up <i>Repeat Item</i>).',
+    'Add <b>If</b> → <i>Text</i> <b>contains</b> <code>' + esc(c.match) + '</code>.',
+    'Inside the If: add <b>Resize Image</b> (Repeat Item) to width <b>1000</b>. Then <b>Convert Image</b> to <b>JPEG</b>, quality about <b>60%</b>. Then <b>Base64 Encode</b> the converted image (Line Breaks: <b>None</b>).',
+    'Still inside the If, add <b>Get Contents of URL</b>. Paste the <b>Upload address</b> below. Tap <b>Show More</b>: Method <b>POST</b>, Request Body <b>JSON</b>. Add one field <b>fields</b> of type <b>Dictionary</b>, and inside it these four, each a <b>Dictionary</b> holding one <b>Text</b> item called <code>stringValue</code>:<br>• <code>k</code> → the <b>Upload key</b> below<br>• <code>img</code> → <i>Base64 Encoded</i><br>• <code>text</code> → <i>Text</i> (from Extract Text)<br>• <code>takenAt</code> → <i>Repeat Item</i> → Date Taken',
+    'Tap <b>Done</b>. Then <b>Automation</b> tab → <b>+</b> → <b>Time of Day</b>: <b>7:30am</b>, Weekly, <b>' + esc(day) + '</b> only → <b>Run Immediately</b> (turn off Notify When Run) → pick <b>Boothkeepr receipts</b>.'
+  ] : [];
+  const shortcutB = apDrop ? [
+    'New shortcut <b>Boothkeepr send</b>. Add <b>Get Contents of URL</b> with the <b>Invoice status address</b> below (method GET).',
+    'Add <b>Get Dictionary Value</b>: key <code>fields.status.stringValue</code> from <i>Contents of URL</i>. Add another: <code>fields.sentAt.stringValue</code>. Add another: <code>fields.text.stringValue</code>.',
+    'Add <b>If</b> <i>status</i> <b>is</b> <code>send</code>, and inside it another <b>If</b> <i>sentAt</i> <b>does not have any value</b>.',
+    'Inside: add WhatsApp’s <b>Send Message</b> action (search “WhatsApp”). Message: the <i>text</i> value. Recipient: your boss.',
+    'Then <b>Get Contents of URL</b> with the <b>Mark-sent address</b> below, Method <b>PATCH</b>, Request Body <b>JSON</b>: field <b>fields</b> (Dictionary) → <code>sentAt</code> (Dictionary) → <code>stringValue</code> = <i>Current Date</i> (tap it → Format: ISO 8601).',
+    'Automation → <b>Time of Day</b> <b>9:00am</b> weekly on <b>' + esc(day) + '</b> → Run Immediately → <b>Boothkeepr send</b>. Add a second one at <b>12:00pm</b> in case the invoice is late.'
+  ] : [];
+  v.innerHTML = '<div class="pagehead"><div><h1>Invoice autopilot</h1><p>Every ' + esc(day) + ': your iPhone sends last week’s CommBank screenshots, Boothkeepr makes and saves the invoice with the receipt gallery, and your iPhone sends the link to your boss on WhatsApp.</p></div></div>' +
+    '<section class="card"><h2>This week</h2>' + (c.on ? st : '<p class="hint" style="margin:0">Autopilot is off.</p>') + '</section>' +
+    '<section class="card"><h2>Settings</h2><div class="fields">' +
+      '<div class="nrow"><label class="switch"><input type="checkbox" id="apOn"' + (c.on ? ' checked' : '') + '><span></span></label><div><b>Make my invoice automatically</b><p>Every ' + esc(day) + ' at the invoice time on the Notifications page.</p></div></div>' +
+      '<label class="f">When it is ready<select id="apSend" class="sel"><option value="auto"' + (c.send === 'auto' ? ' selected' : '') + '>Send it automatically (held if anything looks wrong)</option><option value="ask"' + (c.send === 'ask' ? ' selected' : '') + '>Ask me first (one tap to send)</option></select></label>' +
+      '<label class="f">Boss’s WhatsApp number<input id="apBoss" type="tel" inputmode="tel" value="' + esc(c.boss) + '" placeholder="0412 345 678"></label>' +
+      '<label class="f">Invoice link password<input id="apPw" type="text" value="' + esc(c.pw) + '"></label>' +
+      '<label class="f">Words on your CommBank screenshots<input id="apMatch" type="text" value="' + esc(c.match) + '"></label>' +
+    '</div><div class="actions"><button class="primary" type="button" id="apSave">Save</button>' + (c.on ? '<button class="secondary" type="button" id="apRun">Make this week’s invoice now</button>' : '') + '</div><p class="status" id="apMsg" role="status"></p>' +
+    '<p class="hint">Held instead of sent when: no photo booth events are found, a screenshot cannot be read or its shop is unknown, or the total is far from your usual weeks. You then get a notification to check it and send with one tap.</p></section>' +
+    '<section class="card"><h2>iPhone Shortcuts (one-time setup)</h2>' +
+      (apDrop ? apField('apUp', 'Upload address', restBase() + '/users/' + cloud.user.uid + '/inbox?key=' + FIREBASE_CONFIG.apiKey) + apField('apKey', 'Upload key', apDrop.k, 'keep private') +
+        apField('apOutUrl', 'Invoice status address', restBase() + '/outbox/' + apDrop.out + '?key=' + FIREBASE_CONFIG.apiKey, 'keep private') +
+        apField('apMark', 'Mark-sent address', restBase() + '/outbox/' + apDrop.out + '?key=' + FIREBASE_CONFIG.apiKey + '&updateMask.fieldPaths=sentAt') +
+        '<h3>Shortcut 1: send the screenshots (Thursday 7:30am)</h3><ol class="apsteps">' + shortcutA.map(x => '<li>' + x + '</li>').join('') + '</ol>' +
+        '<h3>Shortcut 2: send the invoice on WhatsApp (Thursday 9am)</h3><ol class="apsteps">' + shortcutB.map(x => '<li>' + x + '</li>').join('') + '</ol>' +
+        '<p class="hint">If WhatsApp stops to ask you to tap Send, that is WhatsApp’s rule for Shortcuts. Apple’s own <b>Send Message</b> (iMessage) action can send with no tap at all: turn off “Show Compose Sheet” on it.</p>' +
+        '<div class="actions"><button class="linkish" type="button" id="apNewKeys">Make new keys</button></div>'
+      : '<p class="hint">First make your private keys. The Shortcuts use them to talk to Boothkeepr without signing in.</p><div class="actions"><button class="primary" type="button" id="apMake">Make my keys</button></div>') +
+    '</section>' +
+    '<section class="card"><h2>Screenshots received (' + box.length + ')</h2>' + (box.length ? '<div class="apgrid">' + box.slice(0, 24).map(b => '<figure><img alt="" src="' + (typeof b.img === 'string' && b.img.length < 1100000 ? 'data:image/jpeg;base64,' + esc(b.img.replace(/^data:[^,]+,/, '')) : '') + '"><figcaption>' + esc(b.takenAt ? String(b.takenAt).slice(0, 16).replace('T', ' ') : '') + '</figcaption></figure>').join('') + '</div><div class="actions"><button class="linkish" type="button" id="apClear">Remove all</button></div>' : '<p class="hint" style="margin:0">None waiting. They arrive when Shortcut 1 runs, and are removed once they are on an invoice.</p>') + '</section>';
+  const msg = (t, k) => { $('apMsg').className = 'status ' + (k || ''); $('apMsg').textContent = t; };
+  v.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => { const el = $(b.dataset.copy); try { navigator.clipboard.writeText(el.value).then(() => { b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy'; }, 1500); }); } catch (e) { el.select(); } }));
+  $('apSave').addEventListener('click', () => {
+    const boss = $('apBoss').value.trim(); if ($('apOn').checked && !waNumber(boss)) { msg('Type your boss’s WhatsApp number (for example 0412 345 678).', 'bad'); return; }
+    if ($('apPw').value.trim().length < 4) { msg('Use a link password of at least 4 characters.', 'bad'); return; }
+    settings.autopilot = Object.assign(apCfg(), { on: $('apOn').checked, send: $('apSend').value, boss, pw: $('apPw').value.trim(), match: $('apMatch').value.trim() || AP_DEF.match }); saveSettings();
+    msg('Saved.', 'ok'); setTimeout(renderAutopilot, 600);
+  });
+  if ($('apRun')) $('apRun').addEventListener('click', () => { settings.autopilot = Object.assign(apCfg(), { runAt: Date.now() }); saveSettings(); msg('Asked for it. The invoice is made within about 10–15 minutes, and you get a notification.', 'ok'); });
+  if ($('apMake')) $('apMake').addEventListener('click', async () => { try { await apMakeKeys(); renderAutopilot(); } catch (e) { msg('Could not make the keys (' + (e.code || 'error') + '). Check the database rules are up to date.', 'bad'); } });
+  if ($('apNewKeys')) $('apNewKeys').addEventListener('click', async () => { if (!(await confirmBox('Make new keys?', 'The old ones stop working at once, so you will need to paste the new ones into both Shortcuts.', 'Make new keys', 'Cancel'))) return; await apMakeKeys(); apOut = null; renderAutopilot(); });
+  if ($('apClear')) $('apClear').addEventListener('click', async () => { for (const b of box) { try { await window.SKFB.deleteDoc(window.SKFB.doc(cloud.col('inbox'), b.id)); } catch (e) {} } apBox = []; renderAutopilot(); });
+  if ($('apOpenInv')) $('apOpenInv').addEventListener('click', () => go({ name: 'inv', no: Number(out.no) }));
+  if ($('apSendNow')) $('apSendNow').addEventListener('click', () => markOutboxSent('app'));
+}
+async function markOutboxSent(via) {
+  if (!apDrop || !apDrop.out) return; const F = window.SKFB;
+  try { await F.updateDoc(F.doc(cloud.fs, 'outbox', apDrop.out), { sentAt: new Date().toISOString(), sentVia: via }); if (apOut) apOut.sentAt = new Date().toISOString(); } catch (e) {}
+}
+
+/* the robot run: only ever started by the reminder service, with a one-off sign-in token in the address */
+const robotToken = (location.hash.match(/^#robot=([A-Za-z0-9._-]{100,4000})$/) || [])[1] || null;
+if (robotToken) { try { history.replaceState(null, '', location.pathname); } catch (e) {} }
+async function robotRun() {
+  const done = r => { window.__robotResult = Object.assign({ at: Date.now() }, r); };
+  const reasons = [], notes = [];
+  try {
+    await splash.gone; for (let i = 0; i < 100 && !loaded; i++) await new Promise(r => setTimeout(r, 200));
+    const c = apCfg(); const t = todayISO(); const ws = invoiceWeekStart(t); const we = addDays(ws, 6);
+    const ex = invoiceForWeek(ws); if (ex) return done({ status: 'exists', ws, no: ex.no, total: totalsOf(ex).all });
+    const F = window.SKFB;
+    // screenshots from the inbox: only last week's CommBank payments
+    const snap = await F.getDocs(cloud.col('inbox')); const box = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+    const matchRe = new RegExp(String(c.match || AP_DEF.match).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const files = [], from = [];
+    for (const b of box) { if (typeof b.img !== 'string' || b.img.length < 200) continue; if (b.text && !matchRe.test(b.text)) continue;
+      try { const bin = atob(b.img.replace(/^data:[^,]+,/, '').replace(/\s+/g, '')); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+        files.push(new File([u], b.id + '.jpg', { type: 'image/jpeg' })); from.push(b); } catch (e) { reasons.push('A screenshot could not be opened.'); } }
+    // last week's jobs from the run sheet
+    let jobs = []; try { const w = await jobsForWeek(ws, true); jobs = w.jobs || []; } catch (e) { reasons.push('The run sheet could not be read.'); }
+    draft = freshDraft(); draft.date = t; const sm = applyWeek(draft, ws, jobs); store.set('draft', draft);
+    go({ name: 'edit' }); await new Promise(r => setTimeout(r, 300));
+    rcpt.items = []; await readReceiptFiles(files);
+    const used = [];
+    rcpt.items.forEach((it, i) => { it.box = from[i]; });
+    rcpt.items = rcpt.items.filter(it => {
+      const d = it.date || (it.box && String(it.box.takenAt || '').slice(0, 10)) || '';
+      const inWeek = d >= ws && d <= we; if (inWeek && it.box) used.push(it.box.id); return inWeek;
+    });
+    rcpt.items.forEach(it => {
+      const who = it.merchant || 'a screenshot' + (it.date ? ' from ' + fmtDate(it.date) : '');
+      if (it.amount == null) reasons.push('Could not read the amount on ' + who + '.');
+      else if (!it.cat || it.cat === '__new') reasons.push('Unknown shop “' + (it.merchant || '?') + '” (' + money(it.amount) + '). Add it once by hand and it is remembered.');
+      else if (/^fuel$/i.test(it.cat) && it.est === 'history') notes.push('Litres for ' + who + ' worked out from your usual fuel price.');
+    });
+    rcpt.items = rcpt.items.filter(it => it.amount != null && it.cat && it.cat !== '__new');
+    if (rcpt.items.length) await addReceiptsToDraft();
+    if (!sm.count) reasons.push('No photo booth events on the run sheet for ' + weekLabel(ws) + '.');
+    const total = totalsOf(draft).all;
+    const past = sorted().slice(0, 8).map(i => totalsOf(i).all).filter(x => x > 0).sort((a, b) => a - b);
+    if (past.length >= 3) { const med = past[Math.floor(past.length / 2)]; if (total > med * 2.2 || total < med * 0.35) reasons.push('The total ' + money(total) + ' is far from your usual ' + money(med) + '.'); }
+    await trySave(false, false);
+    const inv = invoiceForWeek(ws); if (!inv) return done({ status: 'error', ws, reasons: reasons.concat('The invoice could not be saved.') });
+    let rc = null; try { rc = await uploadShareFiles(inv, c.days); } catch (e) { reasons.push('The receipt photos could not be added to the link.'); }
+    const link = await makeShareLink(inv, c.pw || AP_DEF.pw, c.days, rc && rc.sh ? rc : null);
+    for (const id of used) { try { await F.deleteDoc(F.doc(cloud.col('inbox'), id)); } catch (e) {} }
+    // tidy old screenshots that were never used (older than 3 weeks)
+    for (const b of box) { if (!used.includes(b.id) && String(b.takenAt || '').slice(0, 10) < addDays(ws, -14)) { try { await F.deleteDoc(F.doc(cloud.col('inbox'), b.id)); } catch (e) {} } }
+    const text = 'Hi, here is my tax invoice ' + inv.no + ' for ' + weekLabel(ws) + ' (' + money(totalsOf(inv).all) + '). Receipts are in the link.\n' + link;
+    const status = reasons.length ? 'hold' : c.send === 'ask' ? 'ask' : 'send';
+    try { await F.waitForPendingWrites(cloud.fs); } catch (e) {}
+    done({ status, ws, no: inv.no, total: totalsOf(inv).all, events: sm.count, receipts: (inv.rows || []).filter(r => r.receiptId).length, text, link, reasons, notes });
+  } catch (e) { done({ status: 'error', reasons: reasons.concat('Something went wrong: ' + S(e && e.message, 120)) }); }
+}
 
 /* ---------- sign-in page and Face ID / Touch ID lock ----------
    Signed out: the whole app is replaced by a sign-in page. Signed in with the lock on: the app stays hidden
