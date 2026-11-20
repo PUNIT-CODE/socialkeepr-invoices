@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-V7sAtGk5zKPlGRVi5L+IiwdOWxTcODc19KRBaqinRj4=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-3ELbdfyEE78if0ej253rDGvZLq7IIPVmOCT6CxY5w5U=' 'wasm-unsafe-eval' https://apis.google.com https://www.gstatic.com https://docs.google.com https://*.googleusercontent.com; worker-src 'self' blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://routing.openstreetmap.de https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com https://www.google.com; img-src 'self' data: blob: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://socialkeepr-invoices.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Boothkeepr: run sheet, client messages, receipts and invoices for Social Keepr photo booth technicians. Works offline.">
@@ -409,6 +409,7 @@ button.stopno { border: 0; cursor: pointer; padding: 0; font: inherit; font-size
 .sharepanel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); display: flex; flex-direction: column; gap: 10px; }
 .sharepanel p { margin: 0; font-size: 14px; }
 .pwrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; } .pwrow label { flex: 1 1 200px; }
+.pwline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; font-size: 14px; } .pwline span { color: var(--muted); } .pwline code { font-size: 15px; padding: 3px 8px; border-radius: 6px; background: var(--field); border: 1px solid var(--line); }
 .sharebig { position: relative; margin-bottom: 10px; } .sharebig > button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; font-size: 14px; } .sharebig > button svg { width: 15px; height: 15px; }
 .sharemenu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; display: flex; flex-direction: column; min-width: 200px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); overflow: hidden; }
 .sharemenu a, .sharemenu button { padding: 12px 16px; text-align: left; color: var(--fg); text-decoration: none; background: none; border: 0; border-bottom: 1px solid var(--line); font: inherit; cursor: pointer; } .sharemenu > :last-child { border-bottom: 0; } .sharemenu a:hover, .sharemenu button:hover { background: var(--field); }
@@ -3419,6 +3420,7 @@ async function robotRun() {
     const inv = invoiceForWeek(ws); if (!inv) return done({ status: 'error', ws, reasons: reasons.concat('The invoice could not be saved.') });
     let rc = null; try { rc = await uploadShareFiles(inv, c.days); } catch (e) { reasons.push('The receipt photos could not be added to the link.'); }
     const link = await makeShareLink(inv, c.pw || AP_DEF.pw, c.days, rc && rc.sh ? rc : null);
+    try { await saveLink(inv, { link, pw: c.pw || AP_DEF.pw, days: c.days, photos: rc && rc.sh ? rc.files.length : 0 }); } catch (e) {}
     for (const id of used) { try { await F.deleteDoc(F.doc(cloud.col('inbox'), id)); } catch (e) {} }
     // tidy old screenshots that were never used (older than 3 weeks)
     for (const b of box) { if (!used.includes(b.id) && String(b.takenAt || '').slice(0, 10) < addDays(ws, -14)) { try { await F.deleteDoc(F.doc(cloud.col('inbox'), b.id)); } catch (e) {} } }
@@ -3685,48 +3687,91 @@ function renderShareViewer() {
     }
   });
 }
+// ----- saved share links: each invoice remembers its link and password, so it can be shared again any time -----
+// Kept in the account (users/<uid>/links/inv-<no>) so every device has them; on this device too as a fallback.
+const linkSig = inv => { const c = Object.assign({}, cleanInvoice(inv) || {}); ['updatedAt', 'createdAt', 'paid', 'paidAt', 'editing'].forEach(k => delete c[k]);
+  const s = JSON.stringify(c) + '|' + S(profile.name, 80) + '|' + S(profile.tfn, 20); let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+const localLinks = () => store.get('links', {});
+async function loadLink(no) {
+  const key = 'inv-' + Number(no);
+  if (mode === 'cloud' && cloud.user && window.SKFB) { try { const d = await window.SKFB.getDoc(window.SKFB.doc(cloud.col('links'), key)); if (d.exists()) return d.data(); } catch (e) {} }
+  return localLinks()[key] || null;
+}
+async function saveLink(inv, rec) {
+  const key = 'inv-' + Number(inv.no); const doc = { no: Number(inv.no), link: S(rec.link, 60000), pw: S(rec.pw, 100), days: Number(rec.days) || 0, exp: rec.days ? Date.now() + rec.days * 864e5 : 0, made: Date.now(), sig: linkSig(inv), photos: Number(rec.photos) || 0 };
+  const all = localLinks(); all[key] = doc; const keys = Object.keys(all); if (keys.length > 120) keys.sort((a, b) => (all[a].made || 0) - (all[b].made || 0)).slice(0, keys.length - 120).forEach(k => delete all[k]); store.set('links', all);
+  if (mode === 'cloud' && cloud.user && window.SKFB) { try { await window.SKFB.setDoc(window.SKFB.doc(cloud.col('links'), key), doc); } catch (e) {} }
+  return doc;
+}
+// make (or remake) the link, with the receipt photos, and remember it
+async function makeAndSaveLink(inv, pw, days, onStep) {
+  let rc = null;
+  if ((inv.rows || []).some(r => r.receiptId)) { if (onStep) onStep('Locking the receipt photos…');
+    try { rc = await uploadShareFiles(inv, days, (k, n) => { if (onStep) onStep('Locking receipt photo ' + k + ' of ' + n + '…'); }); } catch (e) { rc = { failed: true }; } }
+  const link = await makeShareLink(inv, pw, days, rc && rc.sh ? rc : null);
+  const rec = await saveLink(inv, { link, pw, days, photos: rc && rc.sh ? rc.files.length : 0 });
+  return { rec, rc };
+}
+const fmtWhen = t => new Date(t).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 function wireSharePanel(inv) {
-  $('vShare').addEventListener('click', () => {
+  $('vShare').addEventListener('click', async () => {
     const box = $('shareBox'); if (box.innerHTML) { box.innerHTML = ''; return; }
-    const saved = store.get('sharePw', '');
-    box.innerHTML = '<div class="sharepanel"><p>Make a link your boss can open in any browser. They will need the password to see the invoice and download the PDF.</p>' +
-      '<div class="pwrow"><label class="f" for="shPw">Password for this link<input id="shPw" type="text" autocomplete="off" value="' + esc(saved) + '" placeholder="Choose a password"></label><label class="f" for="shDays" style="flex:0 1 150px">Link works for<select id="shDays" class="sel"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option><option value="0">No expiry</option></select></label><button class="primary" type="button" id="shMake">Create link</button></div>' +
-      '<div id="shOut"></div><p class="hint">The invoice is locked inside the link itself. Receipt photos are locked with the same password and kept in your account until the link expires. Send the password separately from the link (for example, tell them once in person or by text).</p></div>';
-    $('shMake').addEventListener('click', async () => {
-      const pw = $('shPw').value; if (pw.length < 8) { $('shOut').innerHTML = '<p class="status bad">Use a password of at least 8 characters.</p>'; return; }
-      store.set('sharePw', pw); $('shMake').disabled = true;
-      try {
-        const days = Number($('shDays').value); let rc = null;
-        if ((inv.rows || []).some(r => r.receiptId)) { $('shOut').innerHTML = '<p class="status">Locking the receipt photos…</p>';
-          try { rc = await uploadShareFiles(inv, days, (k, n) => { $('shOut').innerHTML = '<p class="status">Locking receipt photo ' + k + ' of ' + n + '…</p>'; }); } catch (e) { rc = { failed: true }; } }
-        const link = await makeShareLink(inv, pw, days, rc && rc.sh ? rc : null);
-        $('shOut').innerHTML = '<div class="sharebig"><button class="primary" type="button" id="shSend">' + SHARE_SVG + 'Share via…</button><div class="sharemenu" id="shMenu" hidden></div></div>' +
-          '<div class="linkrow"><input id="shLink" type="text" readonly value="' + esc(link) + '" aria-label="Share link"><button class="secondary" type="button" id="shCopy">Copy link</button></div><p class="status" id="shMsg" role="status"></p>' +
-          (rc && rc.sh ? '<p class="status ok">' + rc.files.length + ' receipt photo' + (rc.files.length === 1 ? '' : 's') + ' included. Your boss will see them as a gallery under the invoice.</p>'
-            : rc && rc.skipped ? '<p class="notice warn">The receipt photos are not in this link: sign in on the Account page first, then make the link again. (The downloaded PDF still has them.)</p>'
-            : rc && rc.failed ? '<p class="notice warn">The receipt photos could not be added (no internet?). The invoice itself is in the link. Try again to include the photos.</p>' : '');
-        $('shLink').addEventListener('focus', e => e.target.select());
-        $('shCopy').addEventListener('click', () => {
-          const done = ok => { $('shMsg').className = 'status ' + (ok ? 'ok' : ''); $('shMsg').textContent = ok ? 'Link copied. Paste it into your message.' : 'Select the link above and copy it.'; if (!ok) $('shLink').select(); };
-          try { navigator.clipboard.writeText(link).then(() => done(true), () => done(false)); } catch (e) { done(false); }
-        });
-        // Apple's share sheet (recent people, Messages, Mail, WhatsApp, AirDrop…) where the browser has one; a small menu elsewhere
-        const shareText = 'Tax invoice ' + inv.no + (inv.weekStart ? ' for ' + weekLabel(inv.weekStart) : ' (' + fmtDate(inv.date) + ')') + (profile.name ? ' from ' + profile.name : '');
-        const shareData = { title: 'Tax invoice ' + inv.no, text: shareText, url: link };
-        $('shSend').addEventListener('click', async () => {
-          if (navigator.share && !window.claude && (!navigator.canShare || navigator.canShare(shareData))) {
-            try { await navigator.share(shareData); $('shMsg').className = 'status ok'; $('shMsg').textContent = 'Shared.'; return; }
-            catch (e) { if (e && e.name === 'AbortError') return; }
-          }
-          const m = $('shMenu'); if (!m.hidden) { m.hidden = true; return; }
-          const body = encodeURIComponent(shareText + '\n' + link);
-          m.innerHTML = '<a href="sms:&body=' + body + '">Messages</a><a href="mailto:?subject=' + encodeURIComponent(shareData.title) + '&body=' + body + '">Email</a><a href="https://wa.me/?text=' + body + '" target="_blank" rel="noopener">WhatsApp</a><button type="button" id="shMenuCopy">Copy link</button>';
-          m.hidden = false; $('shMenuCopy').addEventListener('click', () => { m.hidden = true; $('shCopy').click(); });
-        });
-      } catch (e) { $('shOut').innerHTML = '<p class="status bad">This browser could not make the link. Try a current version of Chrome, Safari or Edge.</p>'; }
-      $('shMake').disabled = false;
-    });
+    box.innerHTML = '<div class="sharepanel"><p class="hint" style="margin:0">Loading…</p></div>';
+    const saved = await loadLink(inv.no); if (!$('shareBox')) return;
+    const expired = saved && saved.exp && saved.exp < Date.now(); const changed = saved && saved.sig !== linkSig(inv);
+    if (saved && saved.link) showSaved(saved, expired, changed); else showForm(store.get('sharePw', ''), 30);
   });
+  function form(pw, days, intro) {
+    return '<p>' + (intro || 'Make a link your boss can open in any browser. They will need the password to see the invoice and download the PDF. It is saved with this invoice, so you only do this once.') + '</p>' +
+      '<div class="pwrow"><label class="f" for="shPw">Password for this link<input id="shPw" type="text" autocomplete="off" value="' + esc(pw) + '" placeholder="Choose a password"></label><label class="f" for="shDays" style="flex:0 1 150px">Link works for<select id="shDays" class="sel">' +
+      [[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'No expiry']].map(([v, l]) => '<option value="' + v + '"' + (Number(days) === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label><button class="primary" type="button" id="shMake">Create link</button></div>';
+  }
+  function showForm(pw, days, intro) {
+    $('shareBox').innerHTML = '<div class="sharepanel">' + form(pw, days, intro) + '<div id="shOut"></div><p class="hint">The invoice is locked inside the link itself. Receipt photos are locked with the same password and kept in your account until the link expires. Send the password separately from the link (for example, tell them once in person or by text).</p></div>';
+    $('shMake').addEventListener('click', () => make($('shPw').value, Number($('shDays').value)));
+  }
+  async function make(pw, days) {
+    const out = $('shOut') || $('shareBox').querySelector('.sharepanel');
+    if (String(pw).length < 8) { $('shOut').innerHTML = '<p class="status bad">Use a password of at least 8 characters.</p>'; return; }
+    store.set('sharePw', pw); document.querySelectorAll('#shareBox button').forEach(b => { b.disabled = true; });
+    const step = t => { const o = $('shOut'); if (o) o.innerHTML = '<p class="status">' + esc(t) + '</p>'; };
+    try { const { rec, rc } = await makeAndSaveLink(inv, pw, days, step); showSaved(rec, false, false, rc); }
+    catch (e) { const o = $('shOut'); if (o) o.innerHTML = '<p class="status bad">This browser could not make the link. Try a current version of Chrome, Safari or Edge.</p>'; document.querySelectorAll('#shareBox button').forEach(b => { b.disabled = false; }); }
+  }
+  function showSaved(rec, expired, changed, rc) {
+    const link = rec.link;
+    const stale = expired ? '<p class="notice warn">This link stopped working on ' + esc(fmtWhen(rec.exp)) + '. Press “Update link” for a fresh one with the same password.</p>'
+      : changed ? '<p class="notice warn">You changed this invoice after the link was made, so the link still shows the old version. Press “Update link” to refresh it (same password).</p>' : '';
+    $('shareBox').innerHTML = '<div class="sharepanel">' + stale +
+      (stale ? '<div class="actions" style="margin-bottom:12px"><button class="primary" type="button" id="shRemake">Update link</button></div>' : '') +
+      '<div class="sharebig"><button class="' + (stale ? 'secondary' : 'primary') + '" type="button" id="shSend">' + SHARE_SVG + 'Share via…</button><div class="sharemenu" id="shMenu" hidden></div></div>' +
+      '<div class="linkrow"><input id="shLink" type="text" readonly value="' + esc(link) + '" aria-label="Share link"><button class="secondary" type="button" id="shCopy">Copy link</button></div>' +
+      '<div class="pwline"><span>Password</span><code id="shPwShow">' + esc(rec.pw) + '</code><button class="linkish" type="button" id="shPwCopy">Copy password</button></div>' +
+      '<p class="hint" style="margin:6px 0 0">Made ' + esc(fmtWhen(rec.made)) + ' · ' + (rec.exp ? (expired ? 'expired ' : 'works until ') + esc(fmtWhen(rec.exp)) : 'never expires') + (rec.photos ? ' · ' + rec.photos + ' receipt photo' + (rec.photos === 1 ? '' : 's') + ' in the gallery' : '') + '</p>' +
+      (rc && rc.skipped ? '<p class="notice warn">The receipt photos are not in this link: sign in on the Account page first, then press “New password or expiry” to make it again. (The downloaded PDF still has them.)</p>'
+        : rc && rc.failed ? '<p class="notice warn">The receipt photos could not be added (no internet?). Press “Update link” later to include them.</p>' : '') +
+      '<p class="status" id="shMsg" role="status"></p><div id="shOut"></div>' +
+      '<div class="actions" style="margin-top:4px"><button class="linkish" type="button" id="shNew">New password or expiry</button></div></div>';
+    const msg = (t, ok) => { $('shMsg').className = 'status ' + (ok ? 'ok' : ''); $('shMsg').textContent = t; };
+    const copy = (text, what) => { try { navigator.clipboard.writeText(text).then(() => msg(what + ' copied.', true), () => msg('Select it and copy it.')); } catch (e) { msg('Select it and copy it.'); } };
+    $('shLink').addEventListener('focus', e => e.target.select());
+    $('shCopy').addEventListener('click', () => copy(link, 'Link'));
+    $('shPwCopy').addEventListener('click', () => copy(rec.pw, 'Password'));
+    if ($('shRemake')) $('shRemake').addEventListener('click', () => make(rec.pw, rec.days));
+    $('shNew').addEventListener('click', () => showForm(rec.pw, rec.days, 'Make a new link for this invoice. The old link keeps working until it expires.'));
+    // Apple's share sheet (recent people, Messages, Mail, WhatsApp, AirDrop…) where the browser has one; a small menu elsewhere
+    const shareText = 'Tax invoice ' + inv.no + (inv.weekStart ? ' for ' + weekLabel(inv.weekStart) : ' (' + fmtDate(inv.date) + ')') + (profile.name ? ' from ' + profile.name : '');
+    const shareData = { title: 'Tax invoice ' + inv.no, text: shareText, url: link };
+    $('shSend').addEventListener('click', async () => {
+      if (navigator.share && !window.claude && (!navigator.canShare || navigator.canShare(shareData))) {
+        try { await navigator.share(shareData); msg('Shared.', true); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+      }
+      const m = $('shMenu'); if (!m.hidden) { m.hidden = true; return; }
+      const body = encodeURIComponent(shareText + '\n' + link);
+      m.innerHTML = '<a href="sms:&body=' + body + '">Messages</a><a href="mailto:?subject=' + encodeURIComponent(shareData.title) + '&body=' + body + '">Email</a><a href="https://wa.me/?text=' + body + '" target="_blank" rel="noopener">WhatsApp</a><button type="button" id="shMenuCopy">Copy link</button>';
+      m.hidden = false; $('shMenuCopy').addEventListener('click', () => { m.hidden = true; $('shCopy').click(); });
+    });
+  }
 }
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); }); }

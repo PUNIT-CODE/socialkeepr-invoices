@@ -73,6 +73,13 @@ service cloud.firestore {
           && str(request.resource.data.text, 1000) && optStr(request.resource.data, 'to', 20) && optStr(request.resource.data, 'job', 200);
         allow update: if false;
       }
+      match /links/{id} {
+        // each invoice's share link and its password, so it can be shared again without making a new one
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && id.matches('inv-[0-9]{1,6}')
+          && request.resource.data.keys().hasOnly(['no', 'link', 'pw', 'days', 'exp', 'made', 'sig', 'photos'])
+          && str(request.resource.data.link, 60000) && str(request.resource.data.pw, 100) && str(request.resource.data.sig, 20);
+      }
       match /inbox/{id} {
         // payment screenshots sent by the person's iPhone Shortcut. The Shortcut is not signed in, so every upload must
         // carry the upload key saved in private/drop; anything else is refused.
